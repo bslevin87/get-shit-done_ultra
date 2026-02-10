@@ -1,6 +1,6 @@
 ---
 name: ultra:gap-close
-description: Read VERIFICATION.md gaps, spawn fixer agents, self-verify with retry
+description: Bug clustering + ralph self-verify — reads VERIFICATION.md gaps, clusters fixes, spawns fixer agents with self-verification
 argument-hint: "<phase-number>"
 allowed-tools:
   - Read
@@ -13,13 +13,13 @@ allowed-tools:
   - AskUserQuestion
 ---
 <objective>
-Close gaps found by adversarial verification. Reads VERIFICATION.md gaps, creates targeted fix plans, executes them, and self-verifies. Retries up to 2 times if gaps persist.
+Close gaps found by adversarial verification. Reads VERIFICATION.md gaps, clusters bugs intelligently, selects appropriate agent types, spawns fixers with self-verification (Ralph protocol), and retries up to 5 times if gaps persist.
 
 Context budget: ~20% orchestrator, 100% fresh per fixer agent.
 </objective>
 
 <execution_context>
-@get-shit-done/workflows/execute-phase.md
+@get-shit-done/workflows/gap-close.md
 </execution_context>
 
 <context>
@@ -33,113 +33,14 @@ Phase: $ARGUMENTS
 </context>
 
 <process>
+Execute the gap-close workflow from @get-shit-done/workflows/gap-close.md end-to-end.
 
-## 1. Load Gaps
-
-```bash
-INIT=$(node ~/.claude/get-shit-done/bin/gsd-tools.js init verify-work "${PHASE_ARG}")
-```
-
-Read VERIFICATION.md from phase directory. Parse `gaps:` from YAML frontmatter.
-
-If no gaps found: "No gaps to close. Phase verification passed."
-
-## 2. Create Fix Plans
-
-For each gap, create a targeted fix plan:
-
-```markdown
----
-phase: {phase}
-plan: {next_plan_number}
-type: execute
-wave: 1
-depends_on: []
-files_modified: [{gap artifact paths}]
-autonomous: true
-gap_closure: true
-gap_source: "VERIFICATION.md"
----
-
-<objective>
-Close verification gap: {gap.truth}
-Reason: {gap.reason}
-</objective>
-
-<tasks>
-<task type="auto">
-  <name>Fix: {gap.truth}</name>
-  <files>{gap.artifacts[].path}</files>
-  <action>
-  {For each gap.missing item:}
-  - {missing item}
-
-  Gap reason: {gap.reason}
-  Attacker finding: {relevant finding from ATTACK.md}
-  </action>
-  <verify>{verification command}</verify>
-  <done>{gap.truth} is now achievable</done>
-</task>
-</tasks>
-```
-
-## 3. Execute Fix Plans
-
-Spawn executor agents for each fix plan (same as execute-phase but with gap_closure flag).
-
-Include file ownership from DOMAINS.md in executor prompts.
-
-## 4. Self-Verify
-
-After execution, run a quick verification:
-
-```bash
-# For each gap, check if the fix resolves it
-for gap in gaps; do
-  # Check artifact exists and isn't stub
-  # Check wiring
-  # Report status
-done
-```
-
-## 5. Retry Logic
-
-```
-MAX_RETRIES=2
-current_retry=0
-
-while gaps_remain and current_retry < MAX_RETRIES:
-  execute_fixes()
-  self_verify()
-  current_retry++
-
-if gaps_remain:
-  report remaining gaps
-  suggest /ultra:adversarial-verify for full re-verification
-```
-
-## 6. Report
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- ULTRA ► GAP CLOSE {COMPLETE|PARTIAL}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Gaps: {closed}/{total} closed
-Retries: {N}/{MAX_RETRIES}
-
-| Gap | Status | Fix |
-|-----|--------|-----|
-| {truth} | ✓ CLOSED / ✗ OPEN | {what was done} |
-
-{If all closed:}
-## ▶ Next: Re-verify
-
-/ultra:adversarial-verify {X}
-
-{If gaps remain:}
-## ⚠ Remaining Gaps
-{list of unclosed gaps with diagnosis}
-```
-
+1. Load gaps from VERIFICATION.md (including debate results if present)
+2. **Bug Clustering** — group gaps by file/domain, assign to clusters
+3. **Agent Type Selection** — build errors→executor, logic bugs→debugger, missing features→executor, CSS→UI-executor
+4. **Spawn Fixers** — one per cluster, with file ownership and Ralph self-verify protocol
+5. **Ralph 3-Level Self-Verify** — each fixer verifies its own work (code review, logical walk-through, runtime check)
+6. **Lead Integration Check** — conflict check, build verify, test suite, spot check
+7. **Retry Logic** — up to 5 attempts, with escalation analysis on exhaustion
+8. Update VERIFICATION.md with results
 </process>
