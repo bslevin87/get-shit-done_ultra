@@ -247,7 +247,61 @@ Display:
 ◆ Spawning {N} fixers...
   → Cluster 1: {agent_type} ({model}) — {bug_count} bugs
   → Cluster 2: {agent_type} ({model}) — {bug_count} bugs
+◆ Coordination: {Agent Teams (native) | Task() subagents}
 ```
+
+### If AGENT_TEAMS_MODE=true — Shared Task List + Fixer Teammates
+
+1. **Lead creates shared task list** from bug clusters:
+
+```
+For each cluster:
+  SharedTask(
+    id="fix-cluster-{N}",
+    cluster="{cluster_number}",
+    description="Fix cluster {N}: {description} ({bug_count} bugs)",
+    bugs=[{ATK-N IDs}],
+    files=[{cluster_file_list}],
+    agent_type="{agent_type}",
+    depends_on=[{dependent_cluster_ids}]
+  )
+```
+
+2. **Spawn fixer teammates** (executor/debugger type per cluster):
+
+```
+Teammate(
+  name="fixer-{N}",
+  prompt="Read the {agent_type} agent definition.
+  You are a fixer for Phase {phase}: {phase_name}.
+
+  {fixer_spawn_template with cluster details}
+
+  EXECUTION PROTOCOL (Agent Teams mode):
+  1. Self-claim fix tasks from the shared task list
+  2. Execute fixes following the cluster plan
+  3. Run Ralph 3-Level Self-Verify (code review → walk-through → runtime)
+  4. Message lead with Ralph results
+  5. Write summary to: {phase_dir}/{plan_id}-SUMMARY.md
+
+  TaskCompleted hook: Ralph must PASS all 3 levels before task marked done.
+  If Ralph fails at any level, fix the issue and re-verify.
+  Report failures honestly — do not mark done if Ralph fails.",
+  model="{EXECUTOR_MODEL}"
+)
+```
+
+3. **Fixers self-claim** clusters from shared task list.
+
+4. **Fixers message lead** with Ralph results. Lead tracks pass/fail per cluster.
+
+5. **TaskCompleted hook:** Ralph must pass before task can be marked done in shared list.
+
+6. **Lead runs integration check** after all fixers go idle (TeammateIdle).
+
+7. **Retry:** If gaps remain, lead spawns fresh teammates for remaining clusters (new teammates, fresh context).
+
+### If AGENT_TEAMS_MODE=false — Task() Subagents (existing behavior)
 
 For each cluster, spawn a fixer with the appropriate agent type:
 
