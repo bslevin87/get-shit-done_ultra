@@ -42,7 +42,11 @@ Examines UX patterns, accessibility, responsive design, and interaction models. 
 
 ## RELAY Protocol
 
-When a researcher discovers information relevant to another perspective, they flag it with a RELAY:
+When a researcher discovers information relevant to another perspective, they flag it.
+
+### Task() Subagent Mode (default)
+
+Researchers write RELAY sections in their output files:
 
 ```markdown
 ## RELAY → Risk Analyst
@@ -51,6 +55,18 @@ Recommend Risk Analyst evaluate v5.x security posture.
 ```
 
 RELAYs are processed during synthesis. They ensure cross-pollination without creating chaotic peer-to-peer communication.
+
+### Agent Teams Mode (experimental)
+
+Researchers **message each other directly** via the native mailbox:
+
+```
+pattern-analyst → risk-analyst: "jose v4.x has CVE — flag JWT v5+ pinning"
+```
+
+No file sections needed — the mailbox IS the relay. Researchers still write their output files (same format), but cross-perspective discoveries travel instantly via messaging instead of waiting for synthesis.
+
+### When to RELAY
 
 **When to RELAY:** Only for discoveries that significantly affect another perspective. Not every finding needs relaying.
 

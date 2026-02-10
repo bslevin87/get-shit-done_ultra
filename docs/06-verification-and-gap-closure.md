@@ -18,6 +18,10 @@ Three agents assess the implementation independently, without seeing each other'
 
 The Attacker presents findings. The Defender responds. The Auditor rules.
 
+**Agent Teams mode (experimental):** Round 2 becomes a live debate via native messaging. Attacker messages Defender with each finding, Defender responds with CONCEDE/DISPUTE and evidence, Auditor observes both messages and rules. No debate moderator Task() needed — the debate happens in real-time. This is the biggest win of the Agent Teams upgrade: each agent reacts to actual arguments, not pre-written positions from static files.
+
+**Task() subagent mode (default):** A debate moderator agent reads all 3 files and simulates the structured debate.
+
 **Attacker findings use ATK-{N} IDs:**
 ```markdown
 ### ATK-1: Missing input validation on login form

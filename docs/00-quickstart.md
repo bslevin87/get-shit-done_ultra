@@ -54,6 +54,16 @@ Or chain everything:
 /ultra:full-pipeline 1
 ```
 
+## Agent Teams Mode (Experimental)
+
+Ultra supports Claude Code's native Agent Teams (Opus 4.6+, Feb 2026) for live inter-agent messaging instead of file relay. Enable with:
+
+```bash
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+Or set in `~/.claude/settings.json` under `"env"`. When disabled (default), all workflows use existing Task() subagent behavior. Both paths produce identical output files — only the coordination transport differs.
+
 ## Ultra Setup (Optional)
 
 For multi-domain projects, create `gsd-ultra.json` in your project root:

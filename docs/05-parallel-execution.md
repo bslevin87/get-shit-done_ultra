@@ -47,12 +47,23 @@ teammate-1 → lead → teammate-2    (correct: hub-spoke)
 teammate-1 → teammate-2           (wrong: peer-to-peer)
 ```
 
+### Task() Subagent Mode (default)
+
 When a teammate discovers something affecting another domain:
 1. Teammate reports the discovery in their SUMMARY.md
 2. Lead processes discoveries after the wave completes
 3. Lead injects relevant context into the next wave or backfills
 
-**Why hub-spoke?** N teammates with peer-to-peer = N*(N-1)/2 communication channels. Hub-spoke keeps it at N channels.
+### Agent Teams Mode (experimental)
+
+When a teammate discovers something affecting another domain:
+1. Teammate **messages lead** via native mailbox (real-time, no file wait)
+2. Lead **messages affected teammates** with relevant context immediately
+3. Teammates can react within the same wave (faster feedback loop)
+
+The shared task list also enables **self-claiming** — teammates pick up tasks matching their domain without orchestrator assignment. Tasks with unmet dependencies stay locked until predecessors complete.
+
+**Why hub-spoke in both modes?** N teammates with peer-to-peer = N*(N-1)/2 communication channels. Hub-spoke keeps it at N channels.
 
 ## Scaling Guidance
 

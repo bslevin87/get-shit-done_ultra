@@ -20,6 +20,15 @@ Ultra extends GSD with a 6-stage pipeline. Each stage is independently invocable
                                        └──────────────┘
 ```
 
+## Coordination Layer
+
+All Ultra workflows support dual-mode coordination:
+
+- **Task() Subagents (default):** File-based relay, orchestrator manages all calls. Stable, works everywhere.
+- **Agent Teams (experimental):** Native teammate messaging, shared task lists, delegate mode. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
+
+Each workflow detects the mode at startup and branches accordingly. Both paths produce identical output files. See [Configuration](08-configuration-and-cost.md) for setup.
+
 ## Stage Details
 
 ### Stage 1: Research Swarm

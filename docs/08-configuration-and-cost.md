@@ -107,6 +107,18 @@ Estimated costs per phase (medium complexity, 4-8 files):
 | Gap Close | ~200K | ~$0.30 |
 | **Total** | **~1.9M** | **~$4.10** |
 
+## Agent Teams Cost Note
+
+When Agent Teams mode is enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`), expect slightly higher token usage per workflow due to:
+
+- **Mailbox overhead:** Each message between teammates has a small token cost for routing and context
+- **Persistent teammates:** Agents stay alive across rounds (e.g., verification Round 1 → Round 2) rather than being disposable subagents
+- **Shared task list management:** Creating, claiming, and updating tasks adds coordination tokens
+
+**Estimated overhead:** ~5-15% more tokens per workflow compared to Task() subagent mode. The trade-off is higher-quality debate (live vs simulated) and faster coordination (no file serialization wait).
+
+For cost-sensitive workflows, keep Agent Teams disabled (default) and use Task() subagents.
+
 ## gsd-ultra.json
 
 Project-level Ultra configuration:

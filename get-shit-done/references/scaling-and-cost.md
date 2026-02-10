@@ -30,6 +30,8 @@ Teammates  | Speedup | Overhead | Net Gain
 
 Overhead comes from: file ownership resolution, integration wiring, hub-spoke communication, and deferred integration time.
 
+**Agent Teams overhead adjustment:** When Agent Teams mode is enabled, add ~5-15% token overhead per workflow for mailbox messaging, persistent teammate context, and shared task list management. The coordination is faster (real-time messaging vs file serialization) but uses slightly more tokens per agent due to mailbox routing.
+
 ## Anti-Patterns
 
 1. **The Kitchen Sink** — Throwing 8 teammates at a 3-file phase. More agents = more coordination overhead. Match team size to phase complexity.

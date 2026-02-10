@@ -127,6 +127,34 @@ Installs to `./.claude/` for testing modifications before contributing.
 
 </details>
 
+### Agent Teams Mode (Experimental)
+
+Ultra can use Claude Code's native Agent Teams for inter-agent coordination — live messaging instead of file relay, shared task lists instead of manual orchestration. This is experimental (Opus 4.6+, Feb 2026).
+
+**Enable:**
+```bash
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+Or add to `~/.claude/settings.json`:
+```json
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+```
+
+When enabled, all Ultra workflows use native teammate coordination. When disabled (default), existing Task() subagent behavior is unchanged. Both modes produce identical output files.
+
+| Feature | Task() Subagents | Agent Teams |
+|---------|-----------------|-------------|
+| Communication | File relay | Native mailbox |
+| Debate (verify) | Moderator reads 3 files | Live messaging |
+| RELAY (research) | Written sections in files | Direct messages |
+| Task management | Orchestrator manages | Shared task list |
+| Display | Sequential | Split-pane |
+
 ### Ultra Setup (Optional)
 
 Ultra works out of the box. For multi-domain phases, add a `gsd-ultra.json` to your project root:
