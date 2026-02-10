@@ -105,7 +105,87 @@ Display banner:
   → Defender  ({DEFENDER_MODEL}) — building the case FOR
   → Attacker  ({ATTACKER_MODEL}) — finding what's BROKEN
   → Auditor   ({AUDITOR_MODEL}) — checking COMPLIANCE
+◆ Coordination: {Agent Teams (native) | Task() subagents}
 ```
+
+### If AGENT_TEAMS_MODE=true — Spawn as Persistent Teammates
+
+Spawn all 3 as **teammates** (they persist through all 3 rounds):
+
+```
+Teammate(
+  name="defender",
+  prompt="First, read the ultra-defender agent definition.
+  You are the Defender for Phase {phase}: {phase_name}.
+  {verification_context}
+
+  ROUND 1: Independent assessment.
+  Write DEFENSE.md to: {phase_dir}/
+  Use DEF-{N} IDs for all evidence points.
+  Include an evidence matrix with file:line references.
+  Message lead when Round 1 output is complete.
+
+  ROUND 2 (Agent Teams debate):
+  Attacker will message you with each ATK-N finding.
+  For each finding, respond to Attacker with:
+  - CONCEDE: acknowledge the issue
+  - DISPUTE: provide file:line counter-evidence
+  Message Auditor with your response so they can rule.
+
+  Write your outputs to files AND participate in live debate.",
+  model="{DEFENDER_MODEL}"
+)
+
+Teammate(
+  name="attacker",
+  prompt="First, read the ultra-attacker agent definition.
+  You are the Attacker for Phase {phase}: {phase_name}.
+  {verification_context}
+
+  ROUND 1: Independent assessment.
+  Write ATTACK.md to: {phase_dir}/
+  Use ATK-{N} IDs for all findings.
+  Tag each with composite perspective (critic/security-auditor/edge-case-hunter).
+  Message lead when Round 1 output is complete.
+
+  ROUND 2 (Agent Teams debate):
+  For each HIGH or CRITICAL finding (non-consensus):
+  1. Message 'defender' with: ATK-ID, severity, evidence, challenge
+  2. Wait for Defender's CONCEDE/DISPUTE response
+  3. Message 'auditor' with the exchange for ruling
+
+  Present findings one at a time for structured debate.",
+  model="{ATTACKER_MODEL}"
+)
+
+Teammate(
+  name="auditor",
+  prompt="First, read the ultra-auditor agent definition.
+  You are the Auditor for Phase {phase}: {phase_name}.
+  {verification_context}
+
+  ROUND 1: Independent assessment.
+  Write AUDIT.md to: {phase_dir}/
+  Calculate compliance score with weighted dimensions.
+  Message lead when Round 1 output is complete.
+
+  ROUND 2 (Agent Teams debate):
+  Observe Attacker/Defender message exchanges.
+  For each debated finding, rule:
+  - SUSTAINED: Attacker's finding stands
+  - OVERRULED: Defender's evidence disproves it
+  - SPLIT: requires Round 3 consensus
+  Message lead with each ruling.
+
+  After all findings debated, write DEBATE.md to: {phase_dir}/
+  with the complete debate record.",
+  model="{AUDITOR_MODEL}"
+)
+```
+
+Wait for all 3 to signal Round 1 complete (TeammateIdle or lead message).
+
+### If AGENT_TEAMS_MODE=false — Task() Subagents (existing behavior)
 
 Spawn all 3 in parallel:
 
@@ -148,7 +228,8 @@ Task(
 
 Wait for all 3 to complete.
 
-Verify outputs:
+### Verify Round 1 outputs (both modes):
+
 ```bash
 for f in DEFENSE ATTACK AUDIT; do
   [ -f "${PHASE_DIR}/${f}.md" ] && echo "✓ ${f}.md" || echo "✗ ${f}.md MISSING"
@@ -186,6 +267,35 @@ Display:
 **Only run debate if Attacker has HIGH or CRITICAL findings that aren't consensus findings.**
 
 If all Attacker findings are LOW/MEDIUM, or all are consensus findings, skip to verdict.
+
+### If AGENT_TEAMS_MODE=true — Live Debate via Native Messaging
+
+**This is the biggest win of the Agent Teams upgrade.** The debate happens in real-time via the mailbox — no debate moderator Task() needed.
+
+The 3 teammates spawned in Round 1 are still alive. Lead messages Attacker to begin debate:
+
+```
+Lead → Attacker: "Begin Round 2 debate. Present HIGH/CRITICAL findings
+  (non-consensus) to Defender one at a time."
+```
+
+**Debate flow (all via native messaging):**
+
+For each ATK-{N} finding (HIGH or CRITICAL, non-consensus):
+1. **Attacker** messages **Defender**: ATK-ID, severity, evidence, challenge
+2. **Defender** messages **Attacker**: CONCEDE or DISPUTE (with file:line counter-evidence)
+3. **Attacker** messages **Auditor**: the exchange for ruling
+4. **Auditor** messages **lead**: ruling — SUSTAINED / OVERRULED / SPLIT
+
+**Lead tracks rulings** from Auditor messages. No file serialization between rounds.
+
+**Consensus detection:** If all 3 teammates independently message lead about the same issue → auto-confirmed finding (strongest signal).
+
+After all findings debated:
+- **Auditor writes DEBATE.md** (same format as Task() path) for the record
+- Lead collects all rulings from message stream
+
+### If AGENT_TEAMS_MODE=false — Debate Moderator Task() (existing behavior)
 
 Run debate as a single agent call with all 3 reports as context:
 
