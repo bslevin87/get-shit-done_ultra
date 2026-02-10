@@ -8,6 +8,54 @@ Replaces GSD's single-researcher model with multi-perspective research: Pattern 
 Four perspectives are better than one. Each researcher has a different "attack surface" — patterns, domain expertise, risks, and UX. The synthesis combines them into a single research document that captures insights no single researcher would find alone.
 </core_principle>
 
+<relay_protocol>
+**RELAY: Cross-Researcher Discovery Notification**
+
+When a researcher discovers information that affects another researcher's domain, they include a RELAY section at the end of their output:
+
+```markdown
+## RELAY (Cross-Perspective Discoveries)
+
+### RELAY → Risk Analyst
+**Discovery:** The auth library we recommend (jose) had a CVE in v4.x
+**Impact:** Risk assessment should flag JWT implementation as requiring v5+ pinning
+**Source:** npm audit / GitHub advisories
+
+### RELAY → UX Investigator
+**Discovery:** The API returns paginated results with cursor-based pagination
+**Impact:** UX should plan for infinite scroll or load-more patterns, not page numbers
+**Source:** API documentation review
+```
+
+**Rules:**
+- Researchers write RELAY sections — they don't read each other's outputs directly
+- The synthesizer reads all RELAY sections and weaves cross-discoveries into the synthesis
+- RELAYs are informational, not prescriptive — the target researcher may already know
+- Keep RELAYs focused: only flag discoveries the other researcher likely wouldn't find independently
+</relay_protocol>
+
+<scaling_guidance>
+**How many researchers to spawn:**
+
+| Phase Size | Files | Researchers | Rationale |
+|------------|-------|-------------|-----------|
+| Small | 2-3 files | 2 (Pattern + Domain) | UX and Risk perspectives add noise for trivial phases |
+| Medium | 4-8 files | 3 (Pattern + Domain + Risk) | Most phases; UX added only if phase has UI components |
+| Large | 10+ files | 4 (all perspectives) | Full swarm for greenfield or complex phases |
+| Greenfield | New project | 4 (all perspectives) | Always full swarm for new codebases |
+
+**Decision logic:**
+```
+if phase has UI components:
+  include UX Investigator
+if phase modifies >3 files or touches auth/data/payments:
+  include Risk Analyst
+always include Pattern Analyst + Domain Expert
+```
+
+When spawning fewer than 4, adjust the synthesis to note which perspectives were included and which were skipped (with rationale).
+</scaling_guidance>
+
 <process>
 
 <step name="initialize" priority="first">
@@ -39,6 +87,11 @@ If gsd-ultra.json missing, fall back to gsd-tools.js model resolution:
 PATTERN_MODEL=$(node ~/.claude/get-shit-done/bin/gsd-tools.js resolve-model gsd-phase-researcher)
 # Use same model for all 4 as fallback
 ```
+
+**Determine researcher count** using scaling guidance:
+- Check phase scope (files count, UI involvement, sensitivity)
+- Default: 4 researchers for medium+ phases
+- Minimum: 2 researchers (Pattern + Domain) for small phases
 </step>
 
 <step name="prepare_research_dir">
@@ -48,7 +101,7 @@ mkdir -p "${PHASE_DIR}/research"
 </step>
 
 <step name="build_research_prompt">
-Construct shared context for all 4 researchers:
+Construct shared context for all researchers:
 
 ```bash
 STATE_CONTENT=$(echo "$INIT" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).state_content || ''")
@@ -70,6 +123,20 @@ Shared context block (passed to all researchers):
 **Project State:**
 {state_content}
 </phase_context>
+
+<relay_instructions>
+If you discover information that would be valuable to another researcher's perspective,
+include a RELAY section at the end of your output:
+
+## RELAY (Cross-Perspective Discoveries)
+### RELAY → {Target Perspective}
+**Discovery:** {what you found}
+**Impact:** {how it affects their research}
+**Source:** {where you found it}
+
+Only relay genuinely cross-cutting discoveries — things the other researcher
+wouldn't find independently from their perspective.
+</relay_instructions>
 ```
 </step>
 
@@ -80,14 +147,14 @@ Display banner:
  ULTRA ► RESEARCH SWARM — PHASE {X}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-◆ Spawning 4 researchers in parallel...
+◆ Spawning {N} researchers in parallel...
   → Pattern Analyst   ({PATTERN_MODEL})
   → Domain Expert     ({DOMAIN_MODEL})
-  → Risk Analyst      ({RISK_MODEL})
-  → UX Investigator   ({UX_MODEL})
+  → Risk Analyst      ({RISK_MODEL})     {if included}
+  → UX Investigator   ({UX_MODEL})       {if included}
 ```
 
-Spawn all 4 in parallel using Task():
+Spawn researchers in parallel using Task():
 
 ```
 Task(
@@ -131,11 +198,11 @@ Task(
 )
 ```
 
-All 4 run in parallel. Wait for all to complete.
+All spawn in parallel. Wait for all to complete.
 </step>
 
 <step name="verify_outputs">
-Verify all 4 perspective files were written:
+Verify all perspective files were written:
 
 ```bash
 for f in pattern-analysis domain-expertise risk-analysis ux-investigation; do
@@ -149,19 +216,50 @@ If any missing: report which researcher failed, offer retry or continue with ava
 <step name="synthesize">
 Display:
 ```
-◆ Synthesizing 4 perspectives into RESEARCH.md...
+◆ Synthesizing {N} perspectives into RESEARCH.md...
 ```
 
-Read all 4 perspective files. Synthesize into a single RESEARCH.md:
+Read all perspective files. The synthesizer has 3 jobs:
+
+**Job 1: Cross-Perspective Synthesis**
+Combine findings into a coherent research document.
+
+**Job 2: RELAY Integration**
+Read RELAY sections from each researcher. Weave cross-discoveries into the relevant sections of the synthesis. Note which RELAYs led to new insights vs. were already covered.
+
+**Job 3: Conflict Resolution**
+When researchers disagree (e.g., Domain Expert recommends library A, Risk Analyst flags library A as risky):
 
 ```markdown
-# Phase {X}: {Name} — Research (Ultra 4-Perspective)
+## Conflicts Identified
+
+### Conflict 1: {Topic}
+**Perspective A ({researcher}):** {position}
+**Perspective B ({researcher}):** {position}
+**Resolution:** {resolved | unresolved}
+**Rationale:** {if resolved, why this position wins}
+**Action needed:** {if unresolved, flag for human review}
+```
+
+Conflict resolution rules:
+1. **Safety > convenience** — Risk Analyst's concerns override Domain Expert's recommendations
+2. **Evidence > opinion** — the perspective with more concrete evidence wins
+3. **Flag when uncertain** — if neither side has clear evidence, mark as unresolved for human review
+4. **Document all conflicts** — even resolved ones, so the planner understands trade-offs
+
+Write synthesized RESEARCH.md:
+
+```markdown
+# Phase {X}: {Name} — Research (Ultra {N}-Perspective)
 
 **Researched:** {timestamp}
-**Perspectives:** 4 (Pattern Analysis, Domain Expertise, Risk Analysis, UX Investigation)
+**Perspectives:** {N} ({list of perspectives used})
+**Perspectives skipped:** {list and rationale, if any}
+**RELAYs processed:** {count}
+**Conflicts identified:** {count resolved} resolved, {count unresolved} unresolved
 
 ## Synthesis Summary
-{2-3 paragraphs combining key findings from all 4 perspectives}
+{2-3 paragraphs combining key findings from all perspectives}
 
 ## User Constraints
 {from CONTEXT.md if exists — copied verbatim}
@@ -192,9 +290,13 @@ Read all 4 perspective files. Synthesize into a single RESEARCH.md:
 
 ## Cross-Perspective Insights
 {findings that emerged from combining perspectives — things no single researcher would have caught}
+{Include RELAY-derived insights here}
+
+## Conflicts and Resolutions
+{from conflict resolution step — resolved and unresolved}
 
 ## Open Questions
-{gaps from all perspectives}
+{gaps from all perspectives + unresolved conflicts needing human input}
 
 ## Sources
 {consolidated source list}
@@ -217,15 +319,16 @@ node ~/.claude/get-shit-done/bin/gsd-tools.js commit "docs(ultra): research swar
  ULTRA ► RESEARCH SWARM COMPLETE ✓
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-**Phase {X}: {Name}** — 4 perspectives synthesized
+**Phase {X}: {Name}** — {N} perspectives synthesized
 
-| Perspective | Confidence | Key Finding |
-|-------------|------------|-------------|
-| Pattern Analyst | {level} | {1-line} |
-| Domain Expert | {level} | {1-line} |
-| Risk Analyst | {level} | {1-line} |
-| UX Investigator | {level} | {1-line} |
+| Perspective | Confidence | Key Finding | RELAYs Sent |
+|-------------|------------|-------------|-------------|
+| Pattern Analyst | {level} | {1-line} | {count} |
+| Domain Expert | {level} | {1-line} | {count} |
+| Risk Analyst | {level} | {1-line} | {count} |
+| UX Investigator | {level} | {1-line} | {count} |
 
+Conflicts: {N resolved}, {M unresolved}
 Research: {phase_dir}/{padded_phase}-RESEARCH.md
 
 ───────────────────────────────────────────────────────
@@ -241,8 +344,11 @@ Research: {phase_dir}/{padded_phase}-RESEARCH.md
 </offer_next>
 
 <success_criteria>
-- [ ] All 4 researcher agents spawned in parallel
-- [ ] All 4 perspective files written to research/ directory
+- [ ] Researcher count determined from scaling guidance
+- [ ] All researcher agents spawned in parallel
+- [ ] All perspective files written to research/ directory
+- [ ] RELAY sections processed and integrated
+- [ ] Conflicts between researchers identified and resolved (or flagged)
 - [ ] Perspectives synthesized into single RESEARCH.md
 - [ ] Cross-perspective insights identified
 - [ ] RESEARCH.md committed to git
