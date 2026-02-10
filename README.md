@@ -1,16 +1,15 @@
 <div align="center">
 
-# GET SHIT DONE
+# GET SHIT DONE · ULTRA
 
-**A light-weight and powerful meta-prompting, context engineering and spec-driven development system for Claude Code, OpenCode, and Gemini CLI.**
+**GSD makes Claude Code reliable. Ultra makes it extraordinary.**
 
-**Solves context rot — the quality degradation that happens as Claude fills its context window.**
+**3x quality. 2.5x speed. Same no-BS philosophy.**
 
 [![npm version](https://img.shields.io/npm/v/get-shit-done-cc?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/get-shit-done-cc)
 [![npm downloads](https://img.shields.io/npm/dm/get-shit-done-cc?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/get-shit-done-cc)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/5JJgD5svVS)
 [![X (Twitter)](https://img.shields.io/badge/X-@gsd__foundation-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/gsd_foundation)
-[![$GSD Token](https://img.shields.io/badge/$GSD-Dexscreener-1C1C1C?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iIzAwRkYwMCIvPjwvc3ZnPg==&logoColor=00FF00)](https://dexscreener.com/solana/dwudwjvan7bzkw9zwlbyv6kspdlvhwzrqy6ebk8xzxkv)
 [![GitHub stars](https://img.shields.io/github/stars/glittercowboy/get-shit-done?style=for-the-badge&logo=github&color=181717)](https://github.com/glittercowboy/get-shit-done)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
@@ -38,37 +37,35 @@ npx get-shit-done-cc@latest
 
 **Trusted by engineers at Amazon, Google, Shopify, and Webflow.**
 
-[Why I Built This](#why-i-built-this) · [How It Works](#how-it-works) · [Commands](#commands) · [Why It Works](#why-it-works)
+[Why I Built Ultra](#why-i-built-ultra) · [How It Works](#how-it-works) · [The Ultra Pipeline](#the-ultra-pipeline) · [Commands](#commands) · [Knowledge Flywheel](#the-knowledge-flywheel) · [When to Use What](#when-to-use-what)
 
 </div>
 
 ---
 
-## Why I Built This
+## Why I Built Ultra
 
-I'm a solo developer. I don't write code — Claude Code does.
+GSD solved context rot — the quality degradation that happens as Claude fills its context window. Fresh context per plan, atomic commits, structured plans. It works. Engineers at real companies use it every day.
 
-Other spec-driven development tools exist; BMAD, Speckit... But they all seem to make things way more complicated than they need to be (sprint ceremonies, story points, stakeholder syncs, retrospectives, Jira workflows) or lack real big picture understanding of what you're building. I'm not a 50-person software company. I don't want to play enterprise theater. I'm just a creative person trying to build great things that work.
+But once I had hundreds of hours building with GSD, I kept hitting the same four walls:
 
-So I built GSD. The complexity is in the system, not in your workflow. Behind the scenes: context engineering, XML prompt formatting, subagent orchestration, state management. What you see: a few commands that just work.
+1. **Blind spots** — A single researcher misses what a team of four would catch. One perspective isn't enough for complex phases.
+2. **Weak plans** — Plans look good until you're three tasks in and realize the architecture doesn't hold. No one challenged the assumptions.
+3. **Bugs slip through** — A single verifier does its best, but it can't simultaneously be the defender, the attacker, and the impartial judge.
+4. **No learning** — Phase 8 is as expensive as Phase 1. The system doesn't get smarter from what it's already built.
 
-The system gives Claude everything it needs to do the work *and* verify it. I trust the workflow. It just does a good job.
+Ultra fixes all four:
 
-That's what this is. No enterprise roleplay bullshit. Just an incredibly effective system for building cool stuff consistently using Claude Code.
+| Problem | GSD | Ultra |
+|---------|-----|-------|
+| Blind spots | 1 researcher | 4-perspective research swarm |
+| Weak plans | Single planner | Builder/Critic adversarial debate |
+| Bugs slip | Single verifier | Defender + Attacker + Auditor triple-check |
+| No learning | Fresh start every phase | Knowledge flywheel — conventions compound |
+
+Ultra is GSD's natural evolution, not a bolt-on. Every Ultra command enriches what's already there. You can use GSD commands, Ultra commands, or mix them freely.
 
 — **TÂCHES**
-
----
-
-Vibecoding has a bad reputation. You describe what you want, AI generates code, and you get inconsistent garbage that falls apart at scale.
-
-GSD fixes that. It's the context engineering layer that makes Claude Code reliable. Describe your idea, let the system extract everything it needs to know, and let Claude Code get to work.
-
----
-
-## Who This Is For
-
-People who want to describe what they want and have it built correctly — without pretending they're running a 50-person engineering org.
 
 ---
 
@@ -130,6 +127,26 @@ Installs to `./.claude/` for testing modifications before contributing.
 
 </details>
 
+### Ultra Setup (Optional)
+
+Ultra works out of the box. For multi-domain phases, add a `gsd-ultra.json` to your project root:
+
+```json
+{
+  "domains": {
+    "auth": { "paths": ["src/features/auth/"], "owner": "teammate-1" },
+    "tasks": { "paths": ["src/features/tasks/"], "owner": "teammate-2" }
+  },
+  "shared_paths": ["src/types/", "src/lib/"],
+  "pipeline": {
+    "adversarial_plan": { "max_rounds": 5 },
+    "adversarial_verify": { "max_debate_rounds": 3 }
+  }
+}
+```
+
+Not required. Without it, Ultra uses smart defaults and auto-discovers domains from your codebase.
+
 ### Recommended: Skip Permissions Mode
 
 GSD is designed for frictionless automation. Run Claude Code with:
@@ -178,134 +195,65 @@ If you prefer not to use that flag, add this to your project's `.claude/settings
 
 ## How It Works
 
-> **Already have code?** Run `/gsd:map-codebase` first. It spawns parallel agents to analyze your stack, architecture, conventions, and concerns. Then `/gsd:new-project` knows your codebase — questions focus on what you're adding, and planning automatically loads your patterns.
+### The GSD Workflow
 
-### 1. Initialize Project
+> **Already have code?** Run `/gsd:map-codebase` first. It spawns parallel agents to analyze your stack, architecture, conventions, and concerns.
+
+The core loop that makes Claude Code reliable:
 
 ```
-/gsd:new-project
+/gsd:new-project → /gsd:discuss-phase → /gsd:plan-phase → /gsd:execute-phase → /gsd:verify-work
 ```
 
-One command, one flow. The system:
+1. **Initialize** (`/gsd:new-project`) — Questions until it understands your idea. Research. Requirements. Roadmap. You approve.
+2. **Discuss** (`/gsd:discuss-phase N`) — Capture your preferences before planning. Visual features? Layout, density. APIs? Response format, error handling. The deeper you go, the more it builds what you imagined.
+3. **Plan** (`/gsd:plan-phase N`) — Research → atomic task plans → verification loop. Each plan fits in a fresh context window.
+4. **Execute** (`/gsd:execute-phase N`) — Plans run in parallel waves. Fresh 200k context per plan. Atomic commit per task. Walk away, come back to clean git history.
+5. **Verify** (`/gsd:verify-work N`) — Walk through deliverables one by one. Yes/no. Broken? Debug agents find root causes and create fix plans.
 
-1. **Questions** — Asks until it understands your idea completely (goals, constraints, tech preferences, edge cases)
-2. **Research** — Spawns parallel agents to investigate the domain (optional but recommended)
-3. **Requirements** — Extracts what's v1, v2, and out of scope
-4. **Roadmap** — Creates phases mapped to requirements
-
-You approve the roadmap. Now you're ready to build.
-
-**Creates:** `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `.planning/research/`
+Loop **discuss → plan → execute → verify** until milestone complete. Context stays fresh. Quality stays high.
 
 ---
 
-### 2. Discuss Phase
+### The Ultra Pipeline
+
+Ultra wraps the same workflow with four upgrades: multi-perspective research, adversarial planning, triple-check verification, and compound learning.
 
 ```
-/gsd:discuss-phase 1
+┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│  1. RESEARCH │───▶│  2. PLAN     │───▶│  3. EXECUTE  │
+│  Swarm ×4    │    │  Builder vs  │    │  Parallel    │
+│  perspectives│    │  Critic      │    │  domains     │
+└─────────────┘    └──────────────┘    └──────────────┘
+       │                                       │
+       ▼                                       ▼
+┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│  6. LEARN   │◀───│  5. FIX      │◀───│  4. VERIFY   │
+│  Retrospect │    │  Cluster +   │    │  Defender vs  │
+│  + flywheel │    │  ralph-verify│    │  Attacker vs  │
+└─────────────┘    └──────────────┘    │  Auditor     │
+                                       └──────────────┘
 ```
 
-**This is where you shape the implementation.**
+**Stage 1: Research Swarm** (`/ultra:research-swarm`) — Four researchers investigate simultaneously: Pattern Analyst, Domain Expert, Risk Analyst, UX Investigator. Cross-perspective RELAY protocol. Synthesizer resolves conflicts.
 
-Your roadmap has a sentence or two per phase. That's not enough context to build something the way *you* imagine it. This step captures your preferences before anything gets researched or planned.
+**Stage 2: Adversarial Plan** (`/ultra:adversarial-plan`) — Builder creates the plan. Critic attacks it. Builder revises. Critic re-reviews. Loop until zero BLOCKERs or max 5 rounds. Result: plans that survive scrutiny before a single line of code is written.
 
-The system analyzes the phase and identifies gray areas based on what's being built:
+**Stage 3: Parallel Execute** (`/ultra:parallel-execute`) — Domains execute in parallel with file ownership enforcement. OWN / SHARED / READ-ONLY / DO NOT TOUCH. Deferred integration — lead wires domains together after all complete.
 
-- **Visual features** → Layout, density, interactions, empty states
-- **APIs/CLIs** → Response format, flags, error handling, verbosity
-- **Content systems** → Structure, tone, depth, flow
-- **Organization tasks** → Grouping criteria, naming, duplicates, exceptions
+**Stage 4: Adversarial Verify** (`/ultra:adversarial-verify`) — Three independent assessors, then structured debate. Defender presents evidence. Attacker presents findings. Auditor rules. Consensus detection when all three flag the same issue. Verdict: PASS / CONDITIONAL_PASS / FAIL.
 
-For each area you select, it asks until you're satisfied. The output — `CONTEXT.md` — feeds directly into the next two steps:
+**Stage 5: Gap Close** (`/ultra:gap-close`) — Clusters related bugs by file and domain. Spawns fixers with the right agent type (executor for missing features, debugger for logic bugs). Ralph 3-level self-verify: code review → logical walk-through → runtime. Up to 5 retries.
 
-1. **Researcher reads it** — Knows what patterns to investigate ("user wants card layout" → research card component libraries)
-2. **Planner reads it** — Knows what decisions are locked ("infinite scroll decided" → plan includes scroll handling)
+**Stage 6: Retrospective** (`/ultra:retrospective`) — The flywheel. Extracts conventions from completed code, proposes CLAUDE.md additions (you approve each one), logs architectural decisions to STATE.md. Every phase makes the next one faster.
 
-The deeper you go here, the more the system builds what you actually want. Skip it and you get reasonable defaults. Use it and you get *your* vision.
-
-**Creates:** `{phase}-CONTEXT.md`
-
----
-
-### 3. Plan Phase
+**Or run everything at once:**
 
 ```
-/gsd:plan-phase 1
+/ultra:full-pipeline 3
 ```
 
-The system:
-
-1. **Researches** — Investigates how to implement this phase, guided by your CONTEXT.md decisions
-2. **Plans** — Creates 2-3 atomic task plans with XML structure
-3. **Verifies** — Checks plans against requirements, loops until they pass
-
-Each plan is small enough to execute in a fresh context window. No degradation, no "I'll be more concise now."
-
-**Creates:** `{phase}-RESEARCH.md`, `{phase}-{N}-PLAN.md`
-
----
-
-### 4. Execute Phase
-
-```
-/gsd:execute-phase 1
-```
-
-The system:
-
-1. **Runs plans in waves** — Parallel where possible, sequential when dependent
-2. **Fresh context per plan** — 200k tokens purely for implementation, zero accumulated garbage
-3. **Commits per task** — Every task gets its own atomic commit
-4. **Verifies against goals** — Checks the codebase delivers what the phase promised
-
-Walk away, come back to completed work with clean git history.
-
-**Creates:** `{phase}-{N}-SUMMARY.md`, `{phase}-VERIFICATION.md`
-
----
-
-### 5. Verify Work
-
-```
-/gsd:verify-work 1
-```
-
-**This is where you confirm it actually works.**
-
-Automated verification checks that code exists and tests pass. But does the feature *work* the way you expected? This is your chance to use it.
-
-The system:
-
-1. **Extracts testable deliverables** — What you should be able to do now
-2. **Walks you through one at a time** — "Can you log in with email?" Yes/no, or describe what's wrong
-3. **Diagnoses failures automatically** — Spawns debug agents to find root causes
-4. **Creates verified fix plans** — Ready for immediate re-execution
-
-If everything passes, you move on. If something's broken, you don't manually debug — you just run `/gsd:execute-phase` again with the fix plans it created.
-
-**Creates:** `{phase}-UAT.md`, fix plans if issues found
-
----
-
-### 6. Repeat → Complete → Next Milestone
-
-```
-/gsd:discuss-phase 2
-/gsd:plan-phase 2
-/gsd:execute-phase 2
-/gsd:verify-work 2
-...
-/gsd:complete-milestone
-/gsd:new-milestone
-```
-
-Loop **discuss → plan → execute → verify** until milestone complete.
-
-Each phase gets your input (discuss), proper research (plan), clean execution (execute), and human verification (verify). Context stays fresh. Quality stays high.
-
-When all phases are done, `/gsd:complete-milestone` archives the milestone and tags the release.
-
-Then `/gsd:new-milestone` starts the next version — same flow as `new-project` but for your existing codebase. You describe what you want to build next, the system researches the domain, you scope requirements, and it creates a fresh roadmap. Each milestone is a clean cycle: define → build → ship.
+Chains all 6 stages for a phase. Maximum quality, zero manual orchestration.
 
 ---
 
@@ -315,22 +263,212 @@ Then `/gsd:new-milestone` starts the next version — same flow as `new-project`
 /gsd:quick
 ```
 
-**For ad-hoc tasks that don't need full planning.**
+For ad-hoc tasks that don't need full planning. Same agents, same quality — skips research, plan-checking, and verification. Use for bug fixes, small features, config changes.
 
-Quick mode gives you GSD guarantees (atomic commits, state tracking) with a faster path:
+---
 
-- **Same agents** — Planner + executor, same quality
-- **Skips optional steps** — No research, no plan checker, no verifier
-- **Separate tracking** — Lives in `.planning/quick/`, not phases
+## The Agent Roster
 
-Use for: bug fixes, small features, config changes, one-off tasks.
+### GSD Agents (11)
+
+| Agent | Role | Tier |
+|-------|------|------|
+| `gsd-planner` | Creates atomic task plans with XML structure | Architect |
+| `gsd-executor` | Implements plans in fresh context windows | Builder |
+| `gsd-debugger` | Investigates bugs with scientific method | Specialist |
+| `gsd-verifier` | Checks codebase delivers what phase promised | Quality |
+| `gsd-plan-checker` | Verifies plans achieve goals before execution | Quality |
+| `gsd-integration-checker` | Verifies cross-phase E2E flows | Quality |
+| `gsd-roadmapper` | Creates phased roadmaps from requirements | Architect |
+| `gsd-phase-researcher` | Investigates how to implement a phase | Research |
+| `gsd-project-researcher` | Investigates domain ecosystem for new projects | Research |
+| `gsd-research-synthesizer` | Synthesizes parallel researcher outputs | Research |
+| `gsd-codebase-mapper` | Explores and documents existing codebases | Research |
+
+### Ultra Agents (9)
+
+| Agent | Role | Composite Behavior |
+|-------|------|--------------------|
+| `ultra-pattern-analyst` | Research — finds patterns in ecosystem | — |
+| `ultra-domain-expert` | Research — deep domain knowledge | — |
+| `ultra-risk-analyst` | Research — identifies risks and trade-offs | — |
+| `ultra-ux-investigator` | Research — UX patterns and accessibility | — |
+| `ultra-builder` | Planning — creates plans with interface contracts | — |
+| `ultra-critic` | Planning — attacks plans until zero BLOCKERs | — |
+| `ultra-defender` | Verification — evidence matrix with file:line refs | Advocate + Evidence Collector |
+| `ultra-attacker` | Verification — finds bugs with ATK-N IDs | Critic + Security Auditor + Edge-Case Hunter |
+| `ultra-auditor` | Verification — weighted compliance score | Code Reviewer + Standards Checker + Accessibility Auditor |
+
+---
+
+## Commands
+
+### Core GSD Workflow
+
+| Command | What it does |
+|---------|--------------|
+| `/gsd:new-project [--auto]` | Full initialization: questions → research → requirements → roadmap |
+| `/gsd:discuss-phase [N]` | Capture implementation decisions before planning |
+| `/gsd:plan-phase [N]` | Research + plan + verify for a phase |
+| `/gsd:execute-phase <N>` | Execute all plans in parallel waves, verify when complete |
+| `/gsd:verify-work [N]` | Manual user acceptance testing |
+| `/gsd:audit-milestone` | Verify milestone achieved its definition of done |
+| `/gsd:complete-milestone` | Archive milestone, tag release |
+| `/gsd:new-milestone [name]` | Start next version |
+
+### Ultra Pipeline
+
+| Command | What it does |
+|---------|--------------|
+| `/ultra:research-swarm <N>` | 4-perspective research swarm with RELAY + conflict resolution |
+| `/ultra:adversarial-plan <N>` | Builder/Critic debate until APPROVED (max 5 rounds) |
+| `/ultra:parallel-execute <N>` | Domain-parallel execution with file ownership |
+| `/ultra:adversarial-verify <N>` | 3-round debate: Defender vs Attacker vs Auditor |
+| `/ultra:gap-close <N>` | Bug clustering + ralph self-verify (max 5 retries) |
+| `/ultra:retrospective <N>` | Knowledge flywheel: conventions + decisions + domain review |
+| `/ultra:full-pipeline <N>` | Chain all 6 Ultra stages for a phase |
+
+### Navigation
+
+| Command | What it does |
+|---------|--------------|
+| `/gsd:progress` | Where am I? What's next? |
+| `/gsd:help` | Show all commands and usage guide |
+| `/gsd:update` | Update GSD with changelog preview |
+| `/gsd:join-discord` | Join the GSD Discord community |
+
+### Brownfield & Phase Management
+
+| Command | What it does |
+|---------|--------------|
+| `/gsd:map-codebase` | Analyze existing codebase before new-project |
+| `/gsd:add-phase` | Append phase to roadmap |
+| `/gsd:insert-phase [N]` | Insert urgent work between phases |
+| `/gsd:remove-phase [N]` | Remove future phase, renumber |
+| `/gsd:list-phase-assumptions [N]` | See Claude's intended approach before planning |
+| `/gsd:plan-milestone-gaps` | Create phases to close gaps from audit |
+
+### Session & Utilities
+
+| Command | What it does |
+|---------|--------------|
+| `/gsd:pause-work` | Create handoff when stopping mid-phase |
+| `/gsd:resume-work` | Restore from last session |
+| `/gsd:settings` | Configure model profile and workflow agents |
+| `/gsd:set-profile <profile>` | Switch model profile (quality/balanced/budget/eco) |
+| `/gsd:add-todo [desc]` | Capture idea for later |
+| `/gsd:check-todos` | List pending todos |
+| `/gsd:debug [desc]` | Systematic debugging with persistent state |
+| `/gsd:quick` | Execute ad-hoc task with GSD guarantees |
+
+---
+
+## The Knowledge Flywheel
+
+Ultra's secret weapon. Each completed phase feeds lessons back into the system:
 
 ```
-/gsd:quick
-> What do you want to do? "Add dark mode toggle to settings"
+Phase 1 → RETROSPECTIVE → 3 conventions added to CLAUDE.md
+Phase 2 → Research swarm reads those conventions → finds patterns 20% faster
+Phase 3 → Planner reads 5 conventions + 4 decisions → better first-draft plans
+Phase 5 → Verifier checks against conventions → finds issues faster
+Phase 8 → Research 60% faster, verification 75% fewer findings
 ```
 
-**Creates:** `.planning/quick/001-add-dark-mode-toggle/PLAN.md`, `SUMMARY.md`
+**How it works:**
+
+1. `/ultra:retrospective` analyzes completed work
+2. Extracts patterns from the code you just built
+3. Proposes CLAUDE.md convention additions — you approve each one
+4. Logs architectural decisions to STATE.md as `DEC-{NNN}` entries
+5. Reviews domain boundaries for shifts
+
+**The math:** Each convention eliminates a class of errors. Five conventions compounding across three phases = exponential improvement. By Phase 8, the system knows your codebase so well that plans converge in 1-2 rounds instead of 5.
+
+Skipping retrospectives costs ~40% of Ultra's long-term value. Don't skip them.
+
+---
+
+## When to Use What
+
+| Criterion | Raw Claude Code | GSD | GSD Ultra |
+|-----------|----------------|-----|-----------|
+| **Files touched** | 1-2 | 3-10 | 5-30+ |
+| **Domains** | 1 | 1-2 | 2-6 |
+| **Quality needs** | Prototype | Production | Production+ |
+| **Research** | Ad hoc | Single researcher | 4-perspective swarm |
+| **Planning** | Inline | Single planner | Builder/Critic debate |
+| **Execution** | Single thread | Wave-parallel | Domain-parallel + deferred integration |
+| **Verification** | Manual | Single verifier | Triple-check debate |
+| **Learning** | None | STATE.md | Full flywheel |
+| **Cost** | $0.50-2 | $2-8 | $5-20 |
+| **Time** | 5-15 min | 15-45 min | 30-90 min |
+
+**Quick rules:**
+- **Bug fix or small feature?** → `/gsd:quick`
+- **Standard phase, 1-2 domains?** → GSD workflow
+- **Complex phase, 3+ domains, quality critical?** → Ultra pipeline
+- **Want maximum quality with zero manual orchestration?** → `/ultra:full-pipeline`
+
+---
+
+## Configuration
+
+GSD stores project settings in `.planning/config.json`. Configure during `/gsd:new-project` or update later with `/gsd:settings`.
+
+### Core Settings
+
+| Setting | Options | Default | What it controls |
+|---------|---------|---------|------------------|
+| `mode` | `yolo`, `interactive` | `interactive` | Auto-approve vs confirm at each step |
+| `depth` | `quick`, `standard`, `comprehensive` | `standard` | Planning thoroughness (phases × plans) |
+
+### Model Profiles
+
+Control which Claude model each agent uses. Balance quality vs token spend.
+
+| Profile | Planning | Execution | Verification | Research | Est. Cost/Phase |
+|---------|----------|-----------|--------------|----------|----------------|
+| `quality` | Opus | Opus | Sonnet | Opus | ~$27 |
+| `balanced` (default) | Opus | Sonnet | Sonnet | Sonnet | ~$13 |
+| `budget` | Sonnet | Sonnet | Haiku | Haiku | ~$8 |
+| `eco` | Sonnet | Sonnet | Haiku | Haiku | ~$4 |
+
+Switch profiles:
+```
+/gsd:set-profile eco
+```
+
+**Eco** is for well-established projects with strong CLAUDE.md conventions. The knowledge flywheel makes planning and verification easier, so cheaper models still deliver good results. Don't use eco for Phase 1 of a new project.
+
+### Workflow Agents
+
+These spawn additional agents during planning/execution. They improve quality but add tokens and time.
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `workflow.research` | `true` | Researches domain before planning each phase |
+| `workflow.plan_check` | `true` | Verifies plans achieve phase goals before execution |
+| `workflow.verifier` | `true` | Confirms must-haves were delivered after execution |
+
+Use `/gsd:settings` to toggle these, or override per-invocation:
+- `/gsd:plan-phase --skip-research`
+- `/gsd:plan-phase --skip-verify`
+
+### Execution
+
+| Setting | Default | What it controls |
+|---------|---------|------------------|
+| `parallelization.enabled` | `true` | Run independent plans simultaneously |
+| `planning.commit_docs` | `true` | Track `.planning/` in git |
+
+### Git Branching
+
+| Setting | Options | Default | What it does |
+|---------|---------|---------|--------------|
+| `git.branching_strategy` | `none`, `phase`, `milestone` | `none` | Branch creation strategy |
+| `git.phase_branch_template` | string | `gsd/phase-{phase}-{slug}` | Template for phase branches |
+| `git.milestone_branch_template` | string | `gsd/{milestone}-{slug}` | Template for milestone branches |
 
 ---
 
@@ -351,9 +489,28 @@ GSD handles it for you:
 | `STATE.md` | Decisions, blockers, position — memory across sessions |
 | `PLAN.md` | Atomic task with XML structure, verification steps |
 | `SUMMARY.md` | What happened, what changed, committed to history |
-| `todos/` | Captured ideas and tasks for later work |
+| `RETROSPECTIVE.md` | Patterns, decisions, conventions — flywheel fuel |
 
-Size limits based on where Claude's quality degrades. Stay under, get consistent excellence.
+### Adversarial Verification
+
+Single-perspective verification misses things. Ultra's triple-check debate catches what individuals can't:
+
+- **Defender** builds an evidence matrix — requirement → file:line proof
+- **Attacker** hunts bugs with composite expertise (security + edge cases + code quality)
+- **Auditor** rules on disputes with a weighted compliance score
+
+When all three flag the same issue, it's a **consensus failure** — the strongest signal that something needs fixing.
+
+### Knowledge Compounding
+
+Most AI systems have no memory. They repeat the same mistakes, explore the same dead ends, rediscover the same patterns. Ultra's flywheel breaks this cycle:
+
+```
+10% improvement per stage:  1.1 × 1.1 × 1.1 × 1.1 = 1.46× overall
+20% improvement per stage:  1.2 × 1.2 × 1.2 × 1.2 = 2.07× overall
+```
+
+The multiplicative effect is why skipping stages destroys more value than it saves — you're not losing one stage's benefit, you're losing its compounding effect on everything downstream.
 
 ### XML Prompt Formatting
 
@@ -379,16 +536,7 @@ Precise instructions. No guessing. Verification built in.
 
 Every stage uses the same pattern: a thin orchestrator spawns specialized agents, collects results, and routes to the next step.
 
-| Stage | Orchestrator does | Agents do |
-|-------|------------------|-----------|
-| Research | Coordinates, presents findings | 4 parallel researchers investigate stack, features, architecture, pitfalls |
-| Planning | Validates, manages iteration | Planner creates plans, checker verifies, loop until pass |
-| Execution | Groups into waves, tracks progress | Executors implement in parallel, each with fresh 200k context |
-| Verification | Presents results, routes next | Verifier checks codebase against goals, debuggers diagnose failures |
-
-The orchestrator never does heavy lifting. It spawns agents, waits, integrates results.
-
-**The result:** You can run an entire phase — deep research, multiple plans created and verified, thousands of lines of code written across parallel executors, automated verification against goals — and your main context window stays at 30-40%. The work happens in fresh subagent contexts. Your session stays fast and responsive.
+The orchestrator never does heavy lifting. It spawns agents, waits, integrates results. **The result:** entire phases run — deep research, adversarial planning, thousands of lines of code across parallel domains, triple-check verification — and your main context window stays at 30-40%.
 
 ### Atomic Git Commits
 
@@ -398,152 +546,10 @@ Each task gets its own commit immediately after completion:
 abc123f docs(08-02): complete user registration plan
 def456g feat(08-02): add email confirmation flow
 hij789k feat(08-02): implement password hashing
-lmn012o feat(08-02): create registration endpoint
 ```
 
 > [!NOTE]
-> **Benefits:** Git bisect finds exact failing task. Each task independently revertable. Clear history for Claude in future sessions. Better observability in AI-automated workflow.
-
-Every commit is surgical, traceable, and meaningful.
-
-### Modular by Design
-
-- Add phases to current milestone
-- Insert urgent work between phases
-- Complete milestones and start fresh
-- Adjust plans without rebuilding everything
-
-You're never locked in. The system adapts.
-
----
-
-## Commands
-
-### Core Workflow
-
-| Command | What it does |
-|---------|--------------|
-| `/gsd:new-project [--auto]` | Full initialization: questions → research → requirements → roadmap |
-| `/gsd:discuss-phase [N]` | Capture implementation decisions before planning |
-| `/gsd:plan-phase [N]` | Research + plan + verify for a phase |
-| `/gsd:execute-phase <N>` | Execute all plans in parallel waves, verify when complete |
-| `/gsd:verify-work [N]` | Manual user acceptance testing ¹ |
-| `/gsd:audit-milestone` | Verify milestone achieved its definition of done |
-| `/gsd:complete-milestone` | Archive milestone, tag release |
-| `/gsd:new-milestone [name]` | Start next version: questions → research → requirements → roadmap |
-
-### Navigation
-
-| Command | What it does |
-|---------|--------------|
-| `/gsd:progress` | Where am I? What's next? |
-| `/gsd:help` | Show all commands and usage guide |
-| `/gsd:update` | Update GSD with changelog preview |
-| `/gsd:join-discord` | Join the GSD Discord community |
-
-### Brownfield
-
-| Command | What it does |
-|---------|--------------|
-| `/gsd:map-codebase` | Analyze existing codebase before new-project |
-
-### Phase Management
-
-| Command | What it does |
-|---------|--------------|
-| `/gsd:add-phase` | Append phase to roadmap |
-| `/gsd:insert-phase [N]` | Insert urgent work between phases |
-| `/gsd:remove-phase [N]` | Remove future phase, renumber |
-| `/gsd:list-phase-assumptions [N]` | See Claude's intended approach before planning |
-| `/gsd:plan-milestone-gaps` | Create phases to close gaps from audit |
-
-### Session
-
-| Command | What it does |
-|---------|--------------|
-| `/gsd:pause-work` | Create handoff when stopping mid-phase |
-| `/gsd:resume-work` | Restore from last session |
-
-### Utilities
-
-| Command | What it does |
-|---------|--------------|
-| `/gsd:settings` | Configure model profile and workflow agents |
-| `/gsd:set-profile <profile>` | Switch model profile (quality/balanced/budget) |
-| `/gsd:add-todo [desc]` | Capture idea for later |
-| `/gsd:check-todos` | List pending todos |
-| `/gsd:debug [desc]` | Systematic debugging with persistent state |
-| `/gsd:quick` | Execute ad-hoc task with GSD guarantees |
-
-<sup>¹ Contributed by reddit user OracleGreyBeard</sup>
-
----
-
-## Configuration
-
-GSD stores project settings in `.planning/config.json`. Configure during `/gsd:new-project` or update later with `/gsd:settings`.
-
-### Core Settings
-
-| Setting | Options | Default | What it controls |
-|---------|---------|---------|------------------|
-| `mode` | `yolo`, `interactive` | `interactive` | Auto-approve vs confirm at each step |
-| `depth` | `quick`, `standard`, `comprehensive` | `standard` | Planning thoroughness (phases × plans) |
-
-### Model Profiles
-
-Control which Claude model each agent uses. Balance quality vs token spend.
-
-| Profile | Planning | Execution | Verification |
-|---------|----------|-----------|--------------|
-| `quality` | Opus | Opus | Sonnet |
-| `balanced` (default) | Opus | Sonnet | Sonnet |
-| `budget` | Sonnet | Sonnet | Haiku |
-
-Switch profiles:
-```
-/gsd:set-profile budget
-```
-
-Or configure via `/gsd:settings`.
-
-### Workflow Agents
-
-These spawn additional agents during planning/execution. They improve quality but add tokens and time.
-
-| Setting | Default | What it does |
-|---------|---------|--------------|
-| `workflow.research` | `true` | Researches domain before planning each phase |
-| `workflow.plan_check` | `true` | Verifies plans achieve phase goals before execution |
-| `workflow.verifier` | `true` | Confirms must-haves were delivered after execution |
-
-Use `/gsd:settings` to toggle these, or override per-invocation:
-- `/gsd:plan-phase --skip-research`
-- `/gsd:plan-phase --skip-verify`
-
-### Execution
-
-| Setting | Default | What it controls |
-|---------|---------|------------------|
-| `parallelization.enabled` | `true` | Run independent plans simultaneously |
-| `planning.commit_docs` | `true` | Track `.planning/` in git |
-
-### Git Branching
-
-Control how GSD handles branches during execution.
-
-| Setting | Options | Default | What it does |
-|---------|---------|---------|--------------|
-| `git.branching_strategy` | `none`, `phase`, `milestone` | `none` | Branch creation strategy |
-| `git.phase_branch_template` | string | `gsd/phase-{phase}-{slug}` | Template for phase branches |
-| `git.milestone_branch_template` | string | `gsd/{milestone}-{slug}` | Template for milestone branches |
-
-**Strategies:**
-- **`none`** — Commits to current branch (default GSD behavior)
-- **`phase`** — Creates a branch per phase, merges at phase completion
-- **`milestone`** — Creates one branch for entire milestone, merges at completion
-
-At milestone completion, GSD offers squash merge (recommended) or merge with history.
+> **Benefits:** Git bisect finds exact failing task. Each task independently revertable. Clear history for Claude in future sessions.
 
 ---
 
@@ -599,11 +605,8 @@ If file reads fail with tilde paths (`~/.claude/...`), set `CLAUDE_CONFIG_DIR` b
 ```bash
 CLAUDE_CONFIG_DIR=/home/youruser/.claude npx get-shit-done-cc --global
 ```
-This ensures absolute paths are used instead of `~` which may not expand correctly in containers.
 
 ### Uninstalling
-
-To remove GSD completely:
 
 ```bash
 # Global installs
@@ -615,15 +618,11 @@ npx get-shit-done-cc --claude --local --uninstall
 npx get-shit-done-cc --opencode --local --uninstall
 ```
 
-This removes all GSD commands, agents, hooks, and settings while preserving your other configurations.
-
 ---
 
 ## Community Ports
 
 OpenCode and Gemini CLI are now natively supported via `npx get-shit-done-cc`.
-
-These community ports pioneered multi-runtime support:
 
 | Project | Platform | Description |
 |---------|----------|-------------|
@@ -652,6 +651,6 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Claude Code is powerful. GSD makes it reliable.**
+**Claude Code is powerful. GSD makes it reliable. Ultra makes it extraordinary.**
 
 </div>
