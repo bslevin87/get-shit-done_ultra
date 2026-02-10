@@ -134,6 +134,16 @@ const MODEL_PROFILES = {
   'gsd-verifier':             { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
   'gsd-plan-checker':         { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
   'gsd-integration-checker':  { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
+  // Ultra agents
+  'ultra-pattern-analyst':    { quality: 'opus',   balanced: 'sonnet', budget: 'haiku' },
+  'ultra-domain-expert':      { quality: 'opus',   balanced: 'sonnet', budget: 'haiku' },
+  'ultra-risk-analyst':       { quality: 'opus',   balanced: 'sonnet', budget: 'haiku' },
+  'ultra-ux-investigator':    { quality: 'sonnet', balanced: 'haiku',  budget: 'haiku' },
+  'ultra-builder':            { quality: 'opus',   balanced: 'opus',   budget: 'sonnet' },
+  'ultra-critic':             { quality: 'opus',   balanced: 'opus',   budget: 'sonnet' },
+  'ultra-defender':           { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
+  'ultra-attacker':           { quality: 'opus',   balanced: 'sonnet', budget: 'sonnet' },
+  'ultra-auditor':            { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

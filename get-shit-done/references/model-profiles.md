@@ -18,6 +18,22 @@ Model profiles control which Claude model each GSD agent uses. This allows balan
 | gsd-plan-checker | sonnet | sonnet | haiku |
 | gsd-integration-checker | sonnet | sonnet | haiku |
 
+### Ultra Agents
+
+Ultra agents use `gsd-ultra.json` for model routing (project-level), falling back to these profiles.
+
+| Agent | `quality` | `balanced` | `budget` |
+|-------|-----------|------------|----------|
+| ultra-pattern-analyst | opus | sonnet | haiku |
+| ultra-domain-expert | opus | sonnet | haiku |
+| ultra-risk-analyst | opus | sonnet | haiku |
+| ultra-ux-investigator | sonnet | haiku | haiku |
+| ultra-builder | opus | opus | sonnet |
+| ultra-critic | opus | opus | sonnet |
+| ultra-defender | sonnet | sonnet | haiku |
+| ultra-attacker | opus | sonnet | sonnet |
+| ultra-auditor | sonnet | sonnet | haiku |
+
 ## Profile Philosophy
 
 **quality** - Maximum reasoning power

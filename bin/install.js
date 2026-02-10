@@ -1305,11 +1305,13 @@ function install(isGlobal, runtime = 'claude') {
 
   // OpenCode uses 'command/' (singular) with flat structure
   // Claude Code & Gemini use 'commands/' (plural) with nested structure
+  let commandDir = null;   // OpenCode flat dir
+  let commandsDir = null;  // Claude/Gemini nested dir
   if (isOpencode) {
     // OpenCode: flat structure in command/ directory
-    const commandDir = path.join(targetDir, 'command');
+    commandDir = path.join(targetDir, 'command');
     fs.mkdirSync(commandDir, { recursive: true });
-    
+
     // Copy commands/gsd/*.md as command/gsd-*.md (flatten structure)
     const gsdSrc = path.join(src, 'commands', 'gsd');
     copyFlattenedCommands(gsdSrc, commandDir, 'gsd', pathPrefix, runtime);
@@ -1321,9 +1323,9 @@ function install(isGlobal, runtime = 'claude') {
     }
   } else {
     // Claude Code & Gemini: nested structure in commands/ directory
-    const commandsDir = path.join(targetDir, 'commands');
+    commandsDir = path.join(targetDir, 'commands');
     fs.mkdirSync(commandsDir, { recursive: true });
-    
+
     const gsdSrc = path.join(src, 'commands', 'gsd');
     const gsdDest = path.join(commandsDir, 'gsd');
     copyWithPathReplacement(gsdSrc, gsdDest, pathPrefix, runtime);
@@ -1331,6 +1333,26 @@ function install(isGlobal, runtime = 'claude') {
       console.log(`  ${green}✓${reset} Installed commands/gsd`);
     } else {
       failures.push('commands/gsd');
+    }
+  }
+
+  // Copy Ultra commands if they exist
+  const ultraSrc = path.join(src, 'commands', 'ultra');
+  if (fs.existsSync(ultraSrc)) {
+    if (isOpencode) {
+      copyFlattenedCommands(ultraSrc, commandDir, 'ultra', pathPrefix, runtime);
+      const ultraCount = fs.readdirSync(commandDir).filter(f => f.startsWith('ultra-')).length;
+      if (ultraCount > 0) {
+        console.log(`  ${green}✓${reset} Installed ${ultraCount} Ultra commands to command/`);
+      }
+    } else {
+      const ultraDest = path.join(commandsDir, 'ultra');
+      copyWithPathReplacement(ultraSrc, ultraDest, pathPrefix, runtime);
+      if (verifyInstalled(ultraDest, 'commands/ultra')) {
+        console.log(`  ${green}✓${reset} Installed commands/ultra`);
+      } else {
+        failures.push('commands/ultra');
+      }
     }
   }
 
@@ -1350,10 +1372,10 @@ function install(isGlobal, runtime = 'claude') {
     const agentsDest = path.join(targetDir, 'agents');
     fs.mkdirSync(agentsDest, { recursive: true });
 
-    // Remove old GSD agents (gsd-*.md) before copying new ones
+    // Remove old GSD and Ultra agents before copying new ones
     if (fs.existsSync(agentsDest)) {
       for (const file of fs.readdirSync(agentsDest)) {
-        if (file.startsWith('gsd-') && file.endsWith('.md')) {
+        if ((file.startsWith('gsd-') || file.startsWith('ultra-')) && file.endsWith('.md')) {
           fs.unlinkSync(path.join(agentsDest, file));
         }
       }
