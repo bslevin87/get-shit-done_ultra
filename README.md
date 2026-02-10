@@ -195,67 +195,150 @@ If you prefer not to use that flag, add this to your project's `.claude/settings
 
 ## How It Works
 
-### The GSD Workflow
-
-> **Already have code?** Run `/gsd:map-codebase` first. It spawns parallel agents to analyze your stack, architecture, conventions, and concerns.
-
-The core loop that makes Claude Code reliable:
+The complete GSD Ultra flow — from idea to shipped code with compound learning:
 
 ```
-/gsd:new-project → /gsd:discuss-phase → /gsd:plan-phase → /gsd:execute-phase → /gsd:verify-work
+                          ┌── GSD FOUNDATION ──┐    ┌─────────── ULTRA PIPELINE ───────────┐
+                          │                     │    │                                       │
+/gsd:new-project ──▶ /gsd:discuss-phase ──▶ RESEARCH ──▶ PLAN ──▶ EXECUTE ──▶ VERIFY ──▶ FIX ──▶ LEARN
+    or                  (your vision)       Swarm ×4   Builder   Parallel   Defender    Cluster  Flywheel
+/gsd:map-codebase                                      vs        domains    vs          + Ralph
+                                                       Critic               Attacker
+                                                                            vs Auditor
 ```
 
-1. **Initialize** (`/gsd:new-project`) — Questions until it understands your idea. Research. Requirements. Roadmap. You approve.
-2. **Discuss** (`/gsd:discuss-phase N`) — Capture your preferences before planning. Visual features? Layout, density. APIs? Response format, error handling. The deeper you go, the more it builds what you imagined.
-3. **Plan** (`/gsd:plan-phase N`) — Research → atomic task plans → verification loop. Each plan fits in a fresh context window.
-4. **Execute** (`/gsd:execute-phase N`) — Plans run in parallel waves. Fresh 200k context per plan. Atomic commit per task. Walk away, come back to clean git history.
-5. **Verify** (`/gsd:verify-work N`) — Walk through deliverables one by one. Yes/no. Broken? Debug agents find root causes and create fix plans.
+### Step 0: Initialize Your Project
 
-Loop **discuss → plan → execute → verify** until milestone complete. Context stays fresh. Quality stays high.
+> **New project?** → `/gsd:new-project` — In-depth interview about your idea. Creates `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`.
+>
+> **Existing code?** → `/gsd:map-codebase` first — Spawns parallel agents to analyze your stack, architecture, conventions, and concerns. Then `/gsd:new-project` knows your codebase.
 
 ---
 
-### The Ultra Pipeline
-
-Ultra wraps the same workflow with four upgrades: multi-perspective research, adversarial planning, triple-check verification, and compound learning.
+### Step 1: Discuss Phase — Shape Your Vision
 
 ```
-┌─────────────┐    ┌──────────────┐    ┌──────────────┐
-│  1. RESEARCH │───▶│  2. PLAN     │───▶│  3. EXECUTE  │
-│  Swarm ×4    │    │  Builder vs  │    │  Parallel    │
-│  perspectives│    │  Critic      │    │  domains     │
-└─────────────┘    └──────────────┘    └──────────────┘
-       │                                       │
-       ▼                                       ▼
-┌─────────────┐    ┌──────────────┐    ┌──────────────┐
-│  6. LEARN   │◀───│  5. FIX      │◀───│  4. VERIFY   │
-│  Retrospect │    │  Cluster +   │    │  Defender vs  │
-│  + flywheel │    │  ralph-verify│    │  Attacker vs  │
-└─────────────┘    └──────────────┘    │  Auditor     │
-                                       └──────────────┘
+/gsd:discuss-phase 1
 ```
 
-**Stage 1: Research Swarm** (`/ultra:research-swarm`) — Four researchers investigate simultaneously: Pattern Analyst, Domain Expert, Risk Analyst, UX Investigator. Cross-perspective RELAY protocol. Synthesizer resolves conflicts.
+**This is where you shape the implementation.** Your roadmap has a sentence or two per phase. That's not enough context to build something the way *you* imagine it.
 
-**Stage 2: Adversarial Plan** (`/ultra:adversarial-plan`) — Builder creates the plan. Critic attacks it. Builder revises. Critic re-reviews. Loop until zero BLOCKERs or max 5 rounds. Result: plans that survive scrutiny before a single line of code is written.
+The system analyzes the phase and identifies gray areas based on what's being built:
 
-**Stage 3: Parallel Execute** (`/ultra:parallel-execute`) — Domains execute in parallel with file ownership enforcement. OWN / SHARED / READ-ONLY / DO NOT TOUCH. Deferred integration — lead wires domains together after all complete.
+- **Visual features** → Layout, density, interactions, empty states
+- **APIs/CLIs** → Response format, flags, error handling, verbosity
+- **Content systems** → Structure, tone, depth, flow
+- **Organization tasks** → Grouping criteria, naming, duplicates, exceptions
 
-**Stage 4: Adversarial Verify** (`/ultra:adversarial-verify`) — Three independent assessors, then structured debate. Defender presents evidence. Attacker presents findings. Auditor rules. Consensus detection when all three flag the same issue. Verdict: PASS / CONDITIONAL_PASS / FAIL.
-
-**Stage 5: Gap Close** (`/ultra:gap-close`) — Clusters related bugs by file and domain. Spawns fixers with the right agent type (executor for missing features, debugger for logic bugs). Ralph 3-level self-verify: code review → logical walk-through → runtime. Up to 5 retries.
-
-**Stage 6: Retrospective** (`/ultra:retrospective`) — The flywheel. Extracts conventions from completed code, proposes CLAUDE.md additions (you approve each one), logs architectural decisions to STATE.md. Every phase makes the next one faster.
-
-**Or run everything at once:**
-
-```
-/ultra:full-pipeline 3
-```
-
-Chains all 6 stages for a phase. Maximum quality, zero manual orchestration.
+For each area, it asks until you're satisfied. The output — `CONTEXT.md` — feeds directly into every downstream stage. The deeper you go here, the more the system builds what you actually want. Skip it and you get reasonable defaults. Use it and you get *your* vision.
 
 ---
+
+### Step 2: Research Swarm — 4 Perspectives
+
+```
+/ultra:research-swarm 1
+```
+
+Four researchers investigate simultaneously, each bringing a different lens:
+
+| Researcher | Answers |
+|-----------|---------|
+| **Pattern Analyst** | How have others solved this? Libraries, patterns, anti-patterns |
+| **Domain Expert** | What does this domain require? Best practices, compliance |
+| **Risk Analyst** | What could go wrong? Security, performance, dependencies |
+| **UX Investigator** | How should users experience this? Accessibility, interactions |
+
+Cross-perspective **RELAY protocol** — when a researcher discovers info affecting another's domain, they flag it. Synthesizer resolves conflicts (safety > convenience, evidence > opinion).
+
+---
+
+### Step 3: Adversarial Plan — Builder vs Critic
+
+```
+/ultra:adversarial-plan 1
+```
+
+Builder creates the plan. Critic attacks it with BLOCKER / WARNING / SUGGESTION findings. Builder revises. Critic re-reviews. Loop until zero BLOCKERs or max 5 rounds.
+
+Plans include interface contracts between domains, file ownership declarations, and domain-to-wave assignment. Result: plans that survive scrutiny before a single line of code is written.
+
+---
+
+### Step 4: Parallel Execute — Domain Ownership
+
+```
+/ultra:parallel-execute 1
+```
+
+Domains execute in parallel with strict file ownership:
+
+| Level | Permission |
+|-------|-----------|
+| **OWN** | Full read/write |
+| **SHARED** | Append only — add new, don't modify existing |
+| **READ-ONLY** | Import and reference only |
+| **DO NOT TOUCH** | No access |
+
+**Deferred integration** — teammates build domains independently, lead wires them together after all complete. No merge conflicts, no race conditions.
+
+---
+
+### Step 5: Adversarial Verify — Triple-Check Debate
+
+```
+/ultra:adversarial-verify 1
+```
+
+Three independent assessors, then structured debate:
+
+- **Round 1:** Defender, Attacker, and Auditor assess independently (parallel)
+- **Round 2:** Attacker presents ATK-N findings → Defender responds (Concede/Dispute/Mitigate) → Auditor rules (SUSTAINED/OVERRULED/SPLIT)
+- **Round 3:** Consensus resolution for any SPLIT rulings
+
+When all three flag the same issue = **consensus failure** (strongest signal). Verdict: **PASS** (90%+) / **CONDITIONAL_PASS** (70%+) / **FAIL**.
+
+---
+
+### Step 6: Gap Close — Cluster + Fix + Self-Verify
+
+```
+/ultra:gap-close 1
+```
+
+Clusters related bugs by file and domain — fixes root causes, not symptoms. Selects the right agent (executor for missing features, debugger for logic bugs). Each fixer runs **Ralph 3-level self-verify**: code review → logical walk-through → runtime verification. Up to 5 retries with escalation analysis.
+
+---
+
+### Step 7: Retrospective — The Flywheel
+
+```
+/ultra:retrospective 1
+```
+
+The compound learning mechanism. Extracts conventions from completed code, proposes CLAUDE.md additions (you approve each one), logs architectural decisions as DEC-{NNN} to STATE.md. Every phase makes the next one faster.
+
+---
+
+### Then Repeat
+
+```
+/gsd:discuss-phase 2
+/ultra:research-swarm 2
+/ultra:adversarial-plan 2
+/ultra:parallel-execute 2
+/ultra:adversarial-verify 2
+/ultra:gap-close 2
+/ultra:retrospective 2
+...
+/gsd:complete-milestone
+```
+
+Or chain everything for a phase:
+
+```
+/ultra:full-pipeline 2
+```
 
 ### Quick Mode
 
@@ -263,7 +346,7 @@ Chains all 6 stages for a phase. Maximum quality, zero manual orchestration.
 /gsd:quick
 ```
 
-For ad-hoc tasks that don't need full planning. Same agents, same quality — skips research, plan-checking, and verification. Use for bug fixes, small features, config changes.
+For ad-hoc tasks that don't need the full pipeline. Same agents, same quality — skips research, debate, and verification. Use for bug fixes, small features, config changes.
 
 ---
 
