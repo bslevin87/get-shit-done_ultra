@@ -182,7 +182,62 @@ Display banner:
   → Domain Expert     ({DOMAIN_MODEL})
   → Risk Analyst      ({RISK_MODEL})     {if included}
   → UX Investigator   ({UX_MODEL})       {if included}
+◆ Coordination: {Agent Teams (native) | Task() subagents}
 ```
+
+### If AGENT_TEAMS_MODE=true — Native Teammates
+
+Lead enters **delegate mode** (coordinates only, does not research):
+
+1. **Spawn 4 researcher teammates** with perspective-specific prompts (same prompts as Task() path):
+
+```
+Teammate(
+  name="pattern-analyst",
+  prompt="First, read the ultra-pattern-analyst agent definition.
+  Then research patterns for Phase {phase}: {phase_name}.
+  {shared_context}
+
+  RELAY PROTOCOL (Agent Teams mode):
+  When you discover information affecting another researcher's domain,
+  MESSAGE that teammate directly instead of writing RELAY sections.
+  Example: message('risk-analyst', 'jose v4.x has CVE — flag JWT pinning')
+
+  Write your output to: {phase_dir}/research/pattern-analysis.md",
+  model="{PATTERN_MODEL}"
+)
+
+Teammate(
+  name="domain-expert",
+  prompt="...(same structure, domain-expert agent definition)...
+  Write to: {phase_dir}/research/domain-expertise.md",
+  model="{DOMAIN_MODEL}"
+)
+
+Teammate(
+  name="risk-analyst",
+  prompt="...(same structure, risk-analyst agent definition)...
+  Write to: {phase_dir}/research/risk-analysis.md",
+  model="{RISK_MODEL}"
+)
+
+Teammate(
+  name="ux-investigator",
+  prompt="...(same structure, ux-investigator agent definition)...
+  Write to: {phase_dir}/research/ux-investigation.md",
+  model="{UX_MODEL}"
+)
+```
+
+2. **RELAY becomes native messaging:** Researchers message each other directly when discovering cross-perspective info. No `## RELAY → Target` file sections needed — the mailbox IS the relay.
+
+3. **TeammateIdle signal** replaces polling — lead knows when each researcher finishes. No need to check return values.
+
+4. **Researchers still write their output files** (same paths: `research/pattern-analysis.md`, etc.) for the synthesis step. Files are the contract — messaging is the transport.
+
+5. Lead **exits delegate mode** after all 4 researchers go idle, then synthesizes RESEARCH.md directly (replaces separate synthesizer Task()).
+
+### If AGENT_TEAMS_MODE=false — Task() Subagents (existing behavior)
 
 Spawn researchers in parallel using Task():
 
