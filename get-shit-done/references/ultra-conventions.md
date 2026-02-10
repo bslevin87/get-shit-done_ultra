@@ -1,6 +1,6 @@
 # Ultra Conventions Reference
 
-Ultra extends GSD with multi-perspective research, adversarial planning, and adversarial verification. These conventions define how Ultra components interact.
+Ultra extends GSD with multi-perspective research, adversarial planning, adversarial verification, and compound learning. These conventions define how Ultra components interact.
 
 ## Pipeline Stages
 
@@ -9,8 +9,9 @@ Ultra extends GSD with multi-perspective research, adversarial planning, and adv
 | 1. Research Swarm | `/ultra:research-swarm` | Pattern Analyst, Domain Expert, Risk Analyst, UX Investigator | 4 perspective files + RESEARCH.md |
 | 2. Adversarial Plan | `/ultra:adversarial-plan` | Builder, Critic | PLAN.md files (approved) |
 | 3. Parallel Execute | `/ultra:parallel-execute` | GSD Executors (with file ownership) | SUMMARY.md files |
-| 4. Adversarial Verify | `/ultra:adversarial-verify` | Defender, Attacker, Auditor | DEFENSE/ATTACK/AUDIT.md + VERIFICATION.md |
-| 5. Gap Close | `/ultra:gap-close` | GSD Executors | Gap fix commits |
+| 4. Adversarial Verify | `/ultra:adversarial-verify` | Defender, Attacker, Auditor | DEFENSE/ATTACK/AUDIT/DEBATE.md + VERIFICATION.md |
+| 5. Gap Close | `/ultra:gap-close` | GSD Executors + Debuggers | Gap fix commits |
+| 6. Retrospective | `/ultra:retrospective` | Orchestrator (interactive) | RETROSPECTIVE.md + CLAUDE.md + STATE.md updates |
 
 ## File Ownership Protocol
 
@@ -51,6 +52,15 @@ Round N: Builder revises → Critic re-reviews
 Exit: Critic signals APPROVED (0 BLOCKERs) OR max rounds reached
 ```
 
+### Planning Auction (Advanced Mode)
+
+For critical architecture phases, planning auction spawns 3 competing Builders who each create independent plans. The Critic evaluates all 3, selects the best, and the winning plan enters the standard Builder/Critic refinement loop. Use when:
+- The phase involves a major architectural decision
+- Multiple valid approaches exist and you want to explore them
+- Quality matters more than speed
+
+Not a separate command — invoke via `/ultra:adversarial-plan {X} --auction`.
+
 ### Severity Levels
 
 | Level | Meaning | Action Required |
@@ -76,26 +86,75 @@ When max rounds reached without convergence:
 
 ## Adversarial Verification Protocol
 
-### Triple-Check System
+### 3-Round Debate System
 
-| Role | Perspective | Output |
-|------|-------------|--------|
-| **Defender** | Advocate — what works | DEFENSE.md |
-| **Attacker** | Adversary — what's broken | ATTACK.md |
-| **Auditor** | Neutral — compliance | AUDIT.md |
+| Round | What Happens | Participants |
+|-------|-------------|-------------|
+| **Round 1** | Independent assessment (parallel) | Defender, Attacker, Auditor |
+| **Round 2** | Structured debate | Attacker presents → Defender responds → Auditor rules |
+| **Round 3** | Consensus (if needed) | Orchestrator resolves SPLIT rulings |
+
+### Finding IDs and Debate Protocol
+
+- Attacker uses ATK-{N} IDs for all findings
+- Defender uses DEF-{N} IDs for all evidence
+- Debate responses: **Concede** / **Dispute** (with evidence) / **Mitigate**
+- Auditor rulings: **SUSTAINED** / **OVERRULED** / **SPLIT**
 
 ### Verdict Logic
 
 | Verdict | Conditions |
 |---------|-----------|
-| **PASS** | Defender ≥90%, Attacker 0 critical + ≤2 high, Auditor ≥90% |
-| **CONDITIONAL_PASS** | Defender ≥70%, Attacker 0 critical, Auditor ≥70% |
-| **FAIL** | Any role below thresholds, OR critical finding |
+| **PASS** | Defender ≥90%, Attacker 0 critical + ≤2 high (post-debate), Auditor ≥90% |
+| **CONDITIONAL_PASS** | Defender ≥70%, Attacker 0 critical (post-debate), Auditor ≥70% |
+| **FAIL** | Any role below thresholds, OR critical finding, OR unresolved consensus failure |
 
 ### Consensus Analysis
 
-When all 3 roles flag the same issue → **consensus failure** (very strong signal).
-When roles disagree → document discrepancy and weigh evidence.
+When all 3 roles flag the same issue → **consensus failure** (very strong signal, auto-confirmed).
+When roles disagree → document discrepancy, debate in Round 2, Auditor rules.
+
+## Knowledge Flywheel Protocol
+
+The flywheel is Ultra's compound learning mechanism (see `references/knowledge-flywheel.md`).
+
+### RETROSPECTIVE.md
+
+Created by `/ultra:retrospective` after verification passes:
+- What Delivered, What Went Well, What Went Wrong, What We Learned
+- Process Metrics (plans, tasks, verdict, gap-close rounds)
+- Patterns Identified (candidates for CLAUDE.md conventions)
+- Architectural Decisions (candidates for STATE.md DEC-{NNN})
+- Domain Boundary Changes (candidates for DOMAINS.md updates)
+
+### STATE.md Decision Protocol
+
+Decisions accumulate with DEC-{NNN} IDs:
+```markdown
+### DEC-001: {Title}
+**Phase:** {X} — {Name}
+**Date:** {timestamp}
+**Decision:** {what}
+**Rationale:** {why}
+```
+
+### CLAUDE.md Evolution
+
+Conventions are proposed during retrospective, approved by user:
+1. Pattern identified → Convention drafted → User asked → Approved/Modified/Rejected
+2. Only specific, actionable conventions (not vague guidelines)
+
+## Modes Reference
+
+| Mode | Pipeline | Best For | Cost |
+|------|----------|----------|------|
+| **Standard GSD** | Research → Plan → Execute → Verify | Most phases | Low |
+| **Ultra Pipeline** | Swarm → Debate Plan → Parallel Execute → Triple Verify → Fix → Learn | Complex/multi-domain | Medium |
+| **Ultra Full** | `/ultra:full-pipeline` chains all 6 stages | Maximum quality | High |
+| **Ultra Eco** | Ultra pipeline with eco model profile | Budget-conscious Ultra | Low |
+| **Quick** | `/gsd:quick` — plan + execute, no research/verify | Bug fixes, small tasks | Minimal |
+| **Audit Only** | `/ultra:adversarial-verify` on existing code | Verify before release | Medium |
+| **Research Only** | `/ultra:research-swarm` before GSD planning | Explore before committing | Low |
 
 ## Model Routing
 
@@ -108,7 +167,7 @@ Ultra uses `gsd-ultra.json` for model routing, falling back to GSD's `gsd-tools.
 
 ### Profile Selection
 
-Same as GSD: `quality` / `balanced` / `budget` set in `.planning/config.json`.
+Four profiles: `quality` / `balanced` / `budget` / `eco` set in `.planning/config.json`.
 
 ## Commit Conventions
 
@@ -116,7 +175,7 @@ Ultra commits follow GSD conventions with extended scope tags:
 
 | Tag | Use |
 |-----|-----|
-| `docs(ultra):` | Pipeline artifacts (RESEARCH.md, PLAN.md, VERIFICATION.md) |
+| `docs(ultra):` | Pipeline artifacts (RESEARCH.md, PLAN.md, VERIFICATION.md, RETROSPECTIVE.md) |
 | `feat(ultra-{domain}):` | Domain-scoped feature |
 | `fix(ultra-{domain}):` | Domain-scoped fix |
 
@@ -137,7 +196,9 @@ Ultra commits follow GSD conventions with extended scope tags:
 ├── DEFENSE.md                   # From Defender
 ├── ATTACK.md                    # From Attacker
 ├── AUDIT.md                     # From Auditor
-└── XX-VERIFICATION.md           # Synthesized verdict
+├── DEBATE.md                    # From Round 2 (if applicable)
+├── XX-VERIFICATION.md           # Synthesized verdict
+└── RETROSPECTIVE.md             # From Knowledge Flywheel
 ```
 
 ## Integration with GSD
@@ -149,6 +210,8 @@ Ultra commands coexist with GSD commands. You can mix them:
 - Use `/ultra:adversarial-plan` instead of GSD's plan-phase
 - Use `/ultra:parallel-execute` instead of GSD's execute-phase
 - Use `/ultra:adversarial-verify` instead of GSD's verify-work
+- Use `/ultra:gap-close` to fix gaps from verification
+- Use `/ultra:retrospective` to capture lessons learned
 - Use `/ultra:full-pipeline` to chain all Ultra stages
 
 GSD commands still work. Ultra is additive, not replacing.

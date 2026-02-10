@@ -12,9 +12,9 @@ Read all files referenced by the invoking prompt's execution_context before star
 Validate argument:
 
 ```
-if $ARGUMENTS.profile not in ["quality", "balanced", "budget"]:
+if $ARGUMENTS.profile not in ["quality", "balanced", "budget", "eco"]:
   Error: Invalid profile "$ARGUMENTS.profile"
-  Valid profiles: quality, balanced, budget
+  Valid profiles: quality, balanced, budget, eco
   EXIT
 ```
 </step>
@@ -68,6 +68,7 @@ Map profile names:
 - quality: use "quality" column from MODEL_PROFILES
 - balanced: use "balanced" column from MODEL_PROFILES
 - budget: use "budget" column from MODEL_PROFILES
+- eco: use "eco" column from MODEL_PROFILES
 </step>
 
 </process>

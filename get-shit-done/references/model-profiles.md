@@ -4,35 +4,35 @@ Model profiles control which Claude model each GSD agent uses. This allows balan
 
 ## Profile Definitions
 
-| Agent | `quality` | `balanced` | `budget` |
-|-------|-----------|------------|----------|
-| gsd-planner | opus | opus | sonnet |
-| gsd-roadmapper | opus | sonnet | sonnet |
-| gsd-executor | opus | sonnet | sonnet |
-| gsd-phase-researcher | opus | sonnet | haiku |
-| gsd-project-researcher | opus | sonnet | haiku |
-| gsd-research-synthesizer | sonnet | sonnet | haiku |
-| gsd-debugger | opus | sonnet | sonnet |
-| gsd-codebase-mapper | sonnet | haiku | haiku |
-| gsd-verifier | sonnet | sonnet | haiku |
-| gsd-plan-checker | sonnet | sonnet | haiku |
-| gsd-integration-checker | sonnet | sonnet | haiku |
+| Agent | `quality` | `balanced` | `budget` | `eco` |
+|-------|-----------|------------|----------|-------|
+| gsd-planner | opus | opus | sonnet | sonnet |
+| gsd-roadmapper | opus | sonnet | sonnet | haiku |
+| gsd-executor | opus | sonnet | sonnet | sonnet |
+| gsd-phase-researcher | opus | sonnet | haiku | haiku |
+| gsd-project-researcher | opus | sonnet | haiku | haiku |
+| gsd-research-synthesizer | sonnet | sonnet | haiku | haiku |
+| gsd-debugger | opus | sonnet | sonnet | sonnet |
+| gsd-codebase-mapper | sonnet | haiku | haiku | haiku |
+| gsd-verifier | sonnet | sonnet | haiku | haiku |
+| gsd-plan-checker | sonnet | sonnet | haiku | haiku |
+| gsd-integration-checker | sonnet | sonnet | haiku | haiku |
 
 ### Ultra Agents
 
 Ultra agents use `gsd-ultra.json` for model routing (project-level), falling back to these profiles.
 
-| Agent | `quality` | `balanced` | `budget` |
-|-------|-----------|------------|----------|
-| ultra-pattern-analyst | opus | sonnet | haiku |
-| ultra-domain-expert | opus | sonnet | haiku |
-| ultra-risk-analyst | opus | sonnet | haiku |
-| ultra-ux-investigator | sonnet | haiku | haiku |
-| ultra-builder | opus | opus | sonnet |
-| ultra-critic | opus | opus | sonnet |
-| ultra-defender | sonnet | sonnet | haiku |
-| ultra-attacker | opus | sonnet | sonnet |
-| ultra-auditor | sonnet | sonnet | haiku |
+| Agent | `quality` | `balanced` | `budget` | `eco` |
+|-------|-----------|------------|----------|-------|
+| ultra-pattern-analyst | opus | sonnet | haiku | haiku |
+| ultra-domain-expert | opus | sonnet | haiku | haiku |
+| ultra-risk-analyst | opus | sonnet | haiku | haiku |
+| ultra-ux-investigator | sonnet | haiku | haiku | haiku |
+| ultra-builder | opus | opus | sonnet | sonnet |
+| ultra-critic | opus | opus | sonnet | sonnet |
+| ultra-defender | sonnet | sonnet | haiku | haiku |
+| ultra-attacker | opus | sonnet | sonnet | haiku |
+| ultra-auditor | sonnet | sonnet | haiku | haiku |
 
 ## Profile Philosophy
 
@@ -51,6 +51,12 @@ Ultra agents use `gsd-ultra.json` for model routing (project-level), falling bac
 - Sonnet for anything that writes code
 - Haiku for research and verification
 - Use when: conserving quota, high-volume work, less critical phases
+
+**eco** - Maximum efficiency
+- Haiku for everything except planning and execution
+- Sonnet for planning (architecture still matters) and code writing
+- Use when: iterating fast on well-understood phases, budget-constrained, non-critical work
+- Trade-off: verification quality is lower, so more gaps may slip through
 
 ## Resolution Logic
 
@@ -87,3 +93,6 @@ Verification requires goal-backward reasoning - checking if code *delivers* what
 
 **Why Haiku for gsd-codebase-mapper?**
 Read-only exploration and pattern extraction. No reasoning required, just structured output from file contents.
+
+**Why eco exists?**
+For well-established projects with strong CLAUDE.md conventions, the knowledge flywheel makes planning and verification easier. Eco leverages accumulated conventions to get good results from cheaper models. Don't use eco for Phase 1 of a new project.
