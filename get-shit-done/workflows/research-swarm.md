@@ -94,6 +94,36 @@ PATTERN_MODEL=$(node ~/.claude/get-shit-done/bin/gsd-tools.js resolve-model gsd-
 - Minimum: 2 researchers (Pattern + Domain) for small phases
 </step>
 
+<step name="detect_agent_teams" priority="after-init">
+Check if Agent Teams is available for native multi-agent coordination:
+
+1. Check env: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
+   ```bash
+   AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+   ```
+2. Verify Claude Code supports Agent Teams (Opus 4.6+ with experimental flag)
+
+Set coordination mode:
+- `AGENT_TEAMS_MODE=true` → use teammates, native messaging, shared task list
+- `AGENT_TEAMS_MODE=false` → use Task() subagents (existing behavior, default)
+
+```bash
+if [ "$AGENT_TEAMS_ENV" = "1" ]; then
+  AGENT_TEAMS_MODE=true
+else
+  AGENT_TEAMS_MODE=false
+fi
+```
+
+Display:
+```
+◆ Coordination: Agent Teams (native)    ← if AGENT_TEAMS_MODE=true
+◆ Coordination: Task() subagents        ← if AGENT_TEAMS_MODE=false
+```
+
+**Both paths produce identical outputs** — same files, same format, same RESEARCH.md. Only the coordination transport differs.
+</step>
+
 <step name="prepare_research_dir">
 ```bash
 mkdir -p "${PHASE_DIR}/research"

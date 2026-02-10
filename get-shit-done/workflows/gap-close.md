@@ -133,6 +133,36 @@ Also read DEBATE.md if it exists (for post-debate severity adjustments).
 Also read ATTACK.md for detailed evidence on each ATK-{N} finding.
 
 If no gaps found: "No gaps to close. Phase verification passed."
+</step>
+
+<step name="detect_agent_teams" priority="after-init">
+Check if Agent Teams is available for native multi-agent coordination:
+
+1. Check env: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
+   ```bash
+   AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+   ```
+2. Verify Claude Code supports Agent Teams (Opus 4.6+ with experimental flag)
+
+Set coordination mode:
+- `AGENT_TEAMS_MODE=true` → shared task list, fixer teammates with self-claiming
+- `AGENT_TEAMS_MODE=false` → Task() per cluster (existing behavior, default)
+
+```bash
+if [ "$AGENT_TEAMS_ENV" = "1" ]; then
+  AGENT_TEAMS_MODE=true
+else
+  AGENT_TEAMS_MODE=false
+fi
+```
+
+Display:
+```
+◆ Coordination: Agent Teams (native)    ← if AGENT_TEAMS_MODE=true
+◆ Coordination: Task() subagents        ← if AGENT_TEAMS_MODE=false
+```
+
+**Both paths produce identical outputs** — same fix SUMMARY.md files, same Ralph self-verify, same retry logic. Only the fixer coordination transport differs.
 
 Display:
 ```

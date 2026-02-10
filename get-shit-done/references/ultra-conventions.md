@@ -201,6 +201,65 @@ Ultra commits follow GSD conventions with extended scope tags:
 └── RETROSPECTIVE.md             # From Knowledge Flywheel
 ```
 
+## Dual-Mode Coordination (Agent Teams / Task Subagents)
+
+Ultra supports two coordination modes. Every workflow detects which is available and branches accordingly. Both paths produce identical outputs — same files, same format, same quality.
+
+### Detection
+
+Each workflow checks at startup:
+```bash
+AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+AGENT_TEAMS_MODE=$( [ "$AGENT_TEAMS_ENV" = "1" ] && echo true || echo false )
+```
+
+### Enable Agent Teams
+
+Set in `~/.claude/settings.json`:
+```json
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+```
+
+Or export before launching Claude Code:
+```bash
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+### Mode Comparison
+
+| Feature | Task() Subagents (default) | Agent Teams (experimental) |
+|---------|---------------------------|---------------------------|
+| Communication | File relay (write → read) | Native mailbox messaging |
+| Task coordination | Orchestrator manages | Shared task list, self-claiming |
+| Debate (verify) | Moderator Task() reads 3 files | Live messaging between teammates |
+| RELAY (research) | Written sections in output files | Direct messages between researchers |
+| Lead role | Orchestrates all calls | Delegate mode (coordinates only) |
+| Completion signal | Task() return value | TeammateIdle / TaskCompleted hooks |
+| Display | Sequential output | Split-pane (tmux/iTerm2) |
+| Status | Stable | Experimental (Opus 4.6+, Feb 2026) |
+
+### Mapping Table
+
+| Ultra Pattern | Task() Implementation | Agent Teams Implementation |
+|--------------|----------------------|---------------------------|
+| RELAY protocol | `## RELAY → Target` sections in files | Researcher messages Target teammate directly |
+| Hub-spoke | Summaries → lead reads → injects into next prompts | Teammates message lead, lead messages affected teammates |
+| Builder/Critic debate | Sequential Task() calls, orchestrator shuttles context | Direct Builder↔Critic messaging, lead monitors |
+| Adversarial debate | Debate moderator Task() reads 3 files | Live Attacker↔Defender messaging, Auditor observes and rules |
+| Parallel execution | Task() per domain with ownership blocks | Shared task list, teammates self-claim, delegate mode |
+| Bug clustering | Task() per cluster | Shared task list from clusters, fixers self-claim |
+
+### Fallback Guarantee
+
+If Agent Teams is disabled or unavailable, all workflows fall back to existing Task() subagent behavior with zero changes to outputs. This is enforced by:
+1. Detection step runs before any agent spawning
+2. Each spawn step has explicit `if AGENT_TEAMS_MODE` / `else` branches
+3. Output files and formats are identical regardless of mode
+
 ## Integration with GSD
 
 Ultra commands coexist with GSD commands. You can mix them:

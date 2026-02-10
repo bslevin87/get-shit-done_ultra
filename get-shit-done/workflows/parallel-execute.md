@@ -68,6 +68,36 @@ DOMAINS=$(cat DOMAINS.md 2>/dev/null || echo '')
 ```
 </step>
 
+<step name="detect_agent_teams" priority="after-init">
+Check if Agent Teams is available for native multi-agent coordination:
+
+1. Check env: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
+   ```bash
+   AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+   ```
+2. Verify Claude Code supports Agent Teams (Opus 4.6+ with experimental flag)
+
+Set coordination mode:
+- `AGENT_TEAMS_MODE=true` → shared task list, delegate mode, self-claiming teammates
+- `AGENT_TEAMS_MODE=false` → Task() per domain (existing behavior, default)
+
+```bash
+if [ "$AGENT_TEAMS_ENV" = "1" ]; then
+  AGENT_TEAMS_MODE=true
+else
+  AGENT_TEAMS_MODE=false
+fi
+```
+
+Display:
+```
+◆ Coordination: Agent Teams (native)    ← if AGENT_TEAMS_MODE=true
+◆ Coordination: Task() subagents        ← if AGENT_TEAMS_MODE=false
+```
+
+**Both paths produce identical outputs** — same SUMMARY.md files, same deferred integration, same file ownership. Only the execution transport differs.
+</step>
+
 <step name="discover_and_group_plans">
 Discover plans and group by wave (same as GSD):
 

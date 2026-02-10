@@ -40,6 +40,36 @@ STATE_CONTENT, ROADMAP_CONTENT, REQUIREMENTS_CONTENT, CONTEXT_CONTENT, RESEARCH_
 Set MAX_ROUNDS=5, current_round=1.
 </step>
 
+<step name="detect_agent_teams" priority="after-init">
+Check if Agent Teams is available for native multi-agent coordination:
+
+1. Check env: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
+   ```bash
+   AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+   ```
+2. Verify Claude Code supports Agent Teams (Opus 4.6+ with experimental flag)
+
+Set coordination mode:
+- `AGENT_TEAMS_MODE=true` → Builder/Critic debate via native teammate messaging
+- `AGENT_TEAMS_MODE=false` → Sequential Task() subagent calls (existing behavior, default)
+
+```bash
+if [ "$AGENT_TEAMS_ENV" = "1" ]; then
+  AGENT_TEAMS_MODE=true
+else
+  AGENT_TEAMS_MODE=false
+fi
+```
+
+Display:
+```
+◆ Coordination: Agent Teams (native)    ← if AGENT_TEAMS_MODE=true
+◆ Coordination: Task() subagents        ← if AGENT_TEAMS_MODE=false
+```
+
+**Both paths produce identical outputs** — same PLAN.md files, same approval flow, same convergence logic. Only the debate transport differs.
+</step>
+
 <step name="check_research">
 If RESEARCH.md missing and research is enabled:
 ```

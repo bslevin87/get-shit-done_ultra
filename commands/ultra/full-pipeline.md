@@ -34,6 +34,27 @@ Phase: $ARGUMENTS
 
 <process>
 
+## Coordination Mode Detection
+
+Before starting the pipeline, detect whether Agent Teams is available:
+
+```bash
+AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+if [ "$AGENT_TEAMS_ENV" = "1" ]; then
+  AGENT_TEAMS_MODE=true
+else
+  AGENT_TEAMS_MODE=false
+fi
+```
+
+Display:
+```
+◆ Coordination: Agent Teams (native)    ← if enabled
+◆ Coordination: Task() subagents        ← if fallback
+```
+
+The mode is detected once here and passed through to each stage. Individual workflows also detect it independently (idempotent), so stages run correctly whether invoked from the pipeline or standalone.
+
 ## Pipeline Overview
 
 ```

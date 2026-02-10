@@ -42,6 +42,36 @@ AUDITOR_MODEL=$(echo "$ULTRA_CONFIG" | node -pe "JSON.parse(require('fs').readFi
 Fallback: use `gsd-verifier` model for all 3.
 </step>
 
+<step name="detect_agent_teams" priority="after-init">
+Check if Agent Teams is available for native multi-agent coordination:
+
+1. Check env: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
+   ```bash
+   AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+   ```
+2. Verify Claude Code supports Agent Teams (Opus 4.6+ with experimental flag)
+
+Set coordination mode:
+- `AGENT_TEAMS_MODE=true` → live debate via native teammate messaging (biggest win)
+- `AGENT_TEAMS_MODE=false` → Task() subagents + debate moderator (existing behavior, default)
+
+```bash
+if [ "$AGENT_TEAMS_ENV" = "1" ]; then
+  AGENT_TEAMS_MODE=true
+else
+  AGENT_TEAMS_MODE=false
+fi
+```
+
+Display:
+```
+◆ Coordination: Agent Teams (native)    ← if AGENT_TEAMS_MODE=true
+◆ Coordination: Task() subagents        ← if AGENT_TEAMS_MODE=false
+```
+
+**Both paths produce identical outputs** — same DEFENSE/ATTACK/AUDIT/DEBATE.md files, same VERIFICATION.md, same verdict logic. Agent Teams mode replaces file-serialized debate with live messaging — the biggest win in this upgrade.
+</step>
+
 <step name="prepare">
 Read phase artifacts:
 ```bash
