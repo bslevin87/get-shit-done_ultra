@@ -140,7 +140,61 @@ Display banner:
 ◆ Wave 1: {N} teammates in parallel
   → {Domain A} ({model}) — OWN: {path}
   → {Domain B} ({model}) — OWN: {path}
+◆ Coordination: {Agent Teams (native) | Task() subagents}
 ```
+
+### If AGENT_TEAMS_MODE=true — Shared Task List + Delegate Mode
+
+1. **Lead creates shared task list** from PLAN.md files (with task dependencies from wave grouping):
+
+```
+For each plan in wave order:
+  SharedTask(
+    id="{plan_id}",
+    domain="{domain_name}",
+    description="Execute plan {plan_id}: {plan_title}",
+    depends_on=[{dependency_plan_ids}],
+    files_owned=[{owned_paths}],
+    plan_path="{plan_path}",
+    summary_path="{summary_path}"
+  )
+```
+
+2. **Lead enters delegate mode** — coordinates only, does not implement:
+
+3. **Spawn domain teammates** with file ownership in spawn prompt:
+
+```
+Teammate(
+  name="{domain_name}-executor",
+  prompt="First, read the gsd-executor agent definition.
+  You are the {domain_name} executor for Phase {phase}: {phase_name}.
+
+  {file_ownership_block}
+
+  EXECUTION PROTOCOL (Agent Teams mode):
+  1. Self-claim tasks from the shared task list that match your domain
+  2. Execute each claimed task following its plan
+  3. Write summary to: {summary_path}
+  4. Message lead with cross-domain discoveries (hub-spoke)
+  5. Do NOT message other teammates directly — all cross-domain goes through lead
+
+  LAYER 2: You may spawn subagents within YOUR owned files.
+
+  TaskCompleted hook: Write SUMMARY.md before marking any task done.",
+  model="{EXECUTOR_MODEL}"
+)
+```
+
+4. **Teammates self-claim tasks** from shared list — native Agent Teams feature. Tasks with unmet dependencies stay locked until predecessors complete.
+
+5. **Hub-spoke via messaging:** Teammates message lead for cross-domain discoveries. Lead messages affected teammates with relevant context.
+
+6. **TaskCompleted hook:** Require SUMMARY.md written before task can be marked done in shared list.
+
+7. **Lead exits delegate mode** after all teammates go idle (TeammateIdle signals), then proceeds to deferred integration.
+
+### If AGENT_TEAMS_MODE=false — Task() Subagents (existing behavior)
 
 For each wave, spawn all plan executors in parallel (Layer 1):
 
