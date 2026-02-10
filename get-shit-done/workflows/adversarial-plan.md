@@ -108,7 +108,67 @@ Display banner:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  ULTRA ► ADVERSARIAL PLANNING — PHASE {X}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+◆ Coordination: {Agent Teams (native) | Task() subagents}
 ```
+
+### If AGENT_TEAMS_MODE=true — Native Teammate Debate
+
+Lead spawns Builder and Critic as **persistent teammates**:
+
+```
+Teammate(
+  name="builder",
+  prompt="First, read the ultra-builder agent definition.
+  You are the Builder for Phase {phase}: {phase_name}.
+  {planning_context}
+  Read CLAUDE.md, DOMAINS.md, and gsd-ultra.json from the project root.
+
+  DEBATE PROTOCOL (Agent Teams mode):
+  1. Create plans and write PLAN.md files to: {phase_dir}/
+  2. Message the 'critic' teammate when plans are ready
+  3. Critic will message you back with BLOCKER/WARNING/SUGGESTION findings
+  4. Address all BLOCKERs, revise plans, message Critic again
+  5. Continue until Critic messages 'APPROVED' or lead intervenes at max rounds
+
+  Write PLAN.md files to: {phase_dir}/",
+  model="{BUILDER_MODEL}"
+)
+
+Teammate(
+  name="critic",
+  prompt="First, read the ultra-critic agent definition.
+  You are the Critic for Phase {phase}: {phase_name}.
+  {planning_context}
+  Read CLAUDE.md, DOMAINS.md, and gsd-ultra.json from the project root.
+
+  DEBATE PROTOCOL (Agent Teams mode):
+  1. Wait for Builder to message you with plans
+  2. Read PLAN.md files from: {phase_dir}/
+  3. Review with BLOCKER/WARNING/SUGGESTION classifications
+  4. Message Builder directly with your findings
+  5. If 0 BLOCKERs: message Builder with 'APPROVED' and message lead
+  6. If BLOCKERs remain: message Builder with feedback for revision
+
+  Maximum rounds: {MAX_ROUNDS}",
+  model="{CRITIC_MODEL}"
+)
+```
+
+**Debate happens via native messaging** — rounds proceed without orchestrator shuttling:
+- Builder creates plans → messages Critic
+- Critic reviews → messages Builder with BLOCKER/WARNING/SUGGESTION
+- Builder revises → messages Critic again
+- Loop until Critic messages "APPROVED" (0 BLOCKERs)
+
+**Lead monitors** via message stream:
+- Tracks round count
+- Intervenes at max rounds ({MAX_ROUNDS})
+- Convergence: Critic messages lead with "APPROVED"
+
+**Both still write PLAN.md files** (same output format, same paths).
+
+### If AGENT_TEAMS_MODE=false — Task() Subagents (existing behavior)
 
 **Round 1: Initial Build**
 
@@ -205,6 +265,8 @@ Task(
 ```
 
 Increment current_round. Loop back to Critic Review.
+
+### Max Rounds Handling (both modes)
 
 **If REVISE and current_round >= MAX_ROUNDS:**
 ```
