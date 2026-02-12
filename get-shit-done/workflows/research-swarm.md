@@ -1,60 +1,14 @@
 <purpose>
-Execute a 4-perspective research swarm for a phase. Spawns 4 specialized researcher agents in parallel, collects their outputs, and synthesizes into a single RESEARCH.md.
-
-Replaces GSD's single-researcher model with multi-perspective research: Pattern Analyst, Domain Expert, Risk Analyst, and UX Investigator each contribute a unique lens.
+Execute a 4-perspective research swarm for a phase. Spawns specialized researcher agents in parallel, collects outputs, and delegates synthesis into RESEARCH.md.
 </purpose>
 
-<core_principle>
-Four perspectives are better than one. Each researcher has a different "attack surface" — patterns, domain expertise, risks, and UX. The synthesis combines them into a single research document that captures insights no single researcher would find alone.
-</core_principle>
-
-<relay_protocol>
-**RELAY: Cross-Researcher Discovery Notification**
-
-When a researcher discovers information that affects another researcher's domain, they include a RELAY section at the end of their output:
-
-```markdown
-## RELAY (Cross-Perspective Discoveries)
-
-### RELAY → Risk Analyst
-**Discovery:** The auth library we recommend (jose) had a CVE in v4.x
-**Impact:** Risk assessment should flag JWT implementation as requiring v5+ pinning
-**Source:** npm audit / GitHub advisories
-
-### RELAY → UX Investigator
-**Discovery:** The API returns paginated results with cursor-based pagination
-**Impact:** UX should plan for infinite scroll or load-more patterns, not page numbers
-**Source:** API documentation review
-```
-
-**Rules:**
-- Researchers write RELAY sections — they don't read each other's outputs directly
-- The synthesizer reads all RELAY sections and weaves cross-discoveries into the synthesis
-- RELAYs are informational, not prescriptive — the target researcher may already know
-- Keep RELAYs focused: only flag discoveries the other researcher likely wouldn't find independently
-</relay_protocol>
-
-<scaling_guidance>
-**How many researchers to spawn:**
-
-| Phase Size | Files | Researchers | Rationale |
-|------------|-------|-------------|-----------|
-| Small | 2-3 files | 2 (Pattern + Domain) | UX and Risk perspectives add noise for trivial phases |
-| Medium | 4-8 files | 3 (Pattern + Domain + Risk) | Most phases; UX added only if phase has UI components |
-| Large | 10+ files | 4 (all perspectives) | Full swarm for greenfield or complex phases |
-| Greenfield | New project | 4 (all perspectives) | Always full swarm for new codebases |
-
-**Decision logic:**
-```
-if phase has UI components:
-  include UX Investigator
-if phase modifies >3 files or touches auth/data/payments:
-  include Risk Analyst
-always include Pattern Analyst + Domain Expert
-```
-
-When spawning fewer than 4, adjust the synthesis to note which perspectives were included and which were skipped (with rationale).
-</scaling_guidance>
+<context_budget>
+Lead stays under 50% context. Enforced by:
+1. **Context-by-reference** — shared context written to `.context-brief.md`, not embedded in spawn prompts
+2. **Delegated synthesis** — Task() subagent reads perspective files and writes RESEARCH.md; lead receives 3-line summary
+3. **Spawn brevity** — each researcher prompt is role + file paths + protocol ref
+4. **Protocols by reference** — RELAY, scaling, synthesis template live in `ultra-conventions.md`
+</context_budget>
 
 <process>
 
@@ -75,7 +29,6 @@ MODEL_PROFILE=$(cat .planning/config.json 2>/dev/null | node -pe "JSON.parse(req
 
 Resolve models for each researcher role from gsd-ultra.json:
 ```bash
-# Parse role models from Ultra config based on profile
 PATTERN_MODEL=$(echo "$ULTRA_CONFIG" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).model_routing.roles.pattern_analyst['$MODEL_PROFILE']")
 DOMAIN_MODEL=$(echo "$ULTRA_CONFIG" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).model_routing.roles.domain_expert['$MODEL_PROFILE']")
 RISK_MODEL=$(echo "$ULTRA_CONFIG" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).model_routing.roles.risk_analyst['$MODEL_PROFILE']")
@@ -88,40 +41,21 @@ PATTERN_MODEL=$(node ~/.claude/get-shit-done/bin/gsd-tools.js resolve-model gsd-
 # Use same model for all 4 as fallback
 ```
 
-**Determine researcher count** using scaling guidance:
+**Determine researcher count** using scaling guidance in `ultra-conventions.md`:
 - Check phase scope (files count, UI involvement, sensitivity)
 - Default: 4 researchers for medium+ phases
 - Minimum: 2 researchers (Pattern + Domain) for small phases
 </step>
 
 <step name="detect_agent_teams" priority="after-init">
-Check if Agent Teams is available for native multi-agent coordination:
-
-1. Check env: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
-   ```bash
-   AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
-   ```
-2. Verify Claude Code supports Agent Teams (Opus 4.6+ with experimental flag)
-
-Set coordination mode:
-- `AGENT_TEAMS_MODE=true` → use teammates, native messaging, shared task list
-- `AGENT_TEAMS_MODE=false` → use Task() subagents (existing behavior, default)
-
 ```bash
-if [ "$AGENT_TEAMS_ENV" = "1" ]; then
-  AGENT_TEAMS_MODE=true
-else
-  AGENT_TEAMS_MODE=false
-fi
+AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+AGENT_TEAMS_MODE=$( [ "$AGENT_TEAMS_ENV" = "1" ] && echo true || echo false )
 ```
 
-Display:
-```
-◆ Coordination: Agent Teams (native)    ← if AGENT_TEAMS_MODE=true
-◆ Coordination: Task() subagents        ← if AGENT_TEAMS_MODE=false
-```
+Display: `Coordination: {Agent Teams (native) | Task() subagents}`
 
-**Both paths produce identical outputs** — same files, same format, same RESEARCH.md. Only the coordination transport differs.
+Both paths produce identical outputs.
 </step>
 
 <step name="prepare_research_dir">
@@ -130,8 +64,8 @@ mkdir -p "${PHASE_DIR}/research"
 ```
 </step>
 
-<step name="build_research_prompt">
-Construct shared context for all researchers:
+<step name="write_context_brief">
+Write shared context to `{phase_dir}/.context-brief.md` (format defined in `ultra-conventions.md`):
 
 ```bash
 STATE_CONTENT=$(echo "$INIT" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).state_content || ''")
@@ -140,254 +74,80 @@ CONTEXT_CONTENT=$(echo "$INIT" | node -pe "JSON.parse(require('fs').readFileSync
 PHASE_DESC=$(node ~/.claude/get-shit-done/bin/gsd-tools.js roadmap get-phase "${PHASE_ARG}" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).section")
 ```
 
-Shared context block (passed to all researchers):
-```markdown
-<phase_context>
-**Phase:** {phase_number} - {phase_name}
-**Goal:** {phase goal from roadmap}
-**Description:** {phase_desc}
+Write `{phase_dir}/.context-brief.md` with phase info, user decisions, project state.
+Include relay instructions: "If you discover cross-perspective info, see RELAY Protocol in ultra-conventions.md."
 
-**User Decisions (from CONTEXT.md):**
-{context_content}
-
-**Project State:**
-{state_content}
-</phase_context>
-
-<relay_instructions>
-If you discover information that would be valuable to another researcher's perspective,
-include a RELAY section at the end of your output:
-
-## RELAY (Cross-Perspective Discoveries)
-### RELAY → {Target Perspective}
-**Discovery:** {what you found}
-**Impact:** {how it affects their research}
-**Source:** {where you found it}
-
-Only relay genuinely cross-cutting discoveries — things the other researcher
-wouldn't find independently from their perspective.
-</relay_instructions>
-```
+This file is written once and referenced by all spawned agents — never embedded inline.
 </step>
 
 <step name="spawn_researchers">
 Display banner:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- ULTRA ► RESEARCH SWARM — PHASE {X}
+ ULTRA > RESEARCH SWARM — PHASE {X}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-◆ Spawning {N} researchers in parallel...
-  → Pattern Analyst   ({PATTERN_MODEL})
-  → Domain Expert     ({DOMAIN_MODEL})
-  → Risk Analyst      ({RISK_MODEL})     {if included}
-  → UX Investigator   ({UX_MODEL})       {if included}
-◆ Coordination: {Agent Teams (native) | Task() subagents}
+Spawning {N} researchers in parallel...
+  > Pattern Analyst   ({PATTERN_MODEL})
+  > Domain Expert     ({DOMAIN_MODEL})
+  > Risk Analyst      ({RISK_MODEL})     {if included}
+  > UX Investigator   ({UX_MODEL})       {if included}
+Coordination: {Agent Teams (native) | Task() subagents}
 ```
 
-### If AGENT_TEAMS_MODE=true — Native Teammates
+**Researcher spawn spec** (table-driven, one entry per researcher):
 
-Lead enters **delegate mode** (coordinates only, does not research):
+| Role | Agent Def | Output File | Model |
+|------|-----------|-------------|-------|
+| Pattern Analyst | ultra-pattern-analyst | research/pattern-analysis.md | {PATTERN_MODEL} |
+| Domain Expert | ultra-domain-expert | research/domain-expertise.md | {DOMAIN_MODEL} |
+| Risk Analyst | ultra-risk-analyst | research/risk-analysis.md | {RISK_MODEL} |
+| UX Investigator | ultra-ux-investigator | research/ux-investigation.md | {UX_MODEL} |
 
-1. **Spawn 4 researcher teammates** with perspective-specific prompts (same prompts as Task() path):
-
+For each researcher, spawn with this prompt template:
 ```
-Teammate(
-  name="pattern-analyst",
-  prompt="First, read the ultra-pattern-analyst agent definition.
-  Then research patterns for Phase {phase}: {phase_name}.
-  {shared_context}
-
-  RELAY PROTOCOL (Agent Teams mode):
-  When you discover information affecting another researcher's domain,
-  MESSAGE that teammate directly instead of writing RELAY sections.
-  Example: message('risk-analyst', 'jose v4.x has CVE — flag JWT pinning')
-
-  Write your output to: {phase_dir}/research/pattern-analysis.md",
-  model="{PATTERN_MODEL}"
-)
-
-Teammate(
-  name="domain-expert",
-  prompt="...(same structure, domain-expert agent definition)...
-  Write to: {phase_dir}/research/domain-expertise.md",
-  model="{DOMAIN_MODEL}"
-)
-
-Teammate(
-  name="risk-analyst",
-  prompt="...(same structure, risk-analyst agent definition)...
-  Write to: {phase_dir}/research/risk-analysis.md",
-  model="{RISK_MODEL}"
-)
-
-Teammate(
-  name="ux-investigator",
-  prompt="...(same structure, ux-investigator agent definition)...
-  Write to: {phase_dir}/research/ux-investigation.md",
-  model="{UX_MODEL}"
-)
+Read the {agent_def} agent definition.
+Research {role_focus} for Phase {phase}: {phase_name}.
+Read context brief: {phase_dir}/.context-brief.md
+Read ultra-conventions.md for RELAY protocol and scaling guidance.
+Write output to: {phase_dir}/{output_file}
 ```
 
-2. **RELAY becomes native messaging:** Researchers message each other directly when discovering cross-perspective info. No `## RELAY → Target` file sections needed — the mailbox IS the relay.
+**If AGENT_TEAMS_MODE=true:** Spawn as Teammate() with name="{role-slug}". RELAY becomes native messaging. Lead enters delegate mode.
 
-3. **TeammateIdle signal** replaces polling — lead knows when each researcher finishes. No need to check return values.
-
-4. **Researchers still write their output files** (same paths: `research/pattern-analysis.md`, etc.) for the synthesis step. Files are the contract — messaging is the transport.
-
-5. Lead **exits delegate mode** after all 4 researchers go idle, then synthesizes RESEARCH.md directly (replaces separate synthesizer Task()).
-
-### If AGENT_TEAMS_MODE=false — Task() Subagents (existing behavior)
-
-Spawn researchers in parallel using Task():
-
-```
-Task(
-  prompt="First, read the ultra-pattern-analyst agent definition.
-  Then research patterns for Phase {phase}: {phase_name}.
-  {shared_context}
-  Write to: {phase_dir}/research/pattern-analysis.md",
-  subagent_type="general-purpose",
-  model="{PATTERN_MODEL}",
-  description="Research patterns Phase {phase}"
-)
-
-Task(
-  prompt="First, read the ultra-domain-expert agent definition.
-  Then research domain expertise for Phase {phase}: {phase_name}.
-  {shared_context}
-  Write to: {phase_dir}/research/domain-expertise.md",
-  subagent_type="general-purpose",
-  model="{DOMAIN_MODEL}",
-  description="Research domain Phase {phase}"
-)
-
-Task(
-  prompt="First, read the ultra-risk-analyst agent definition.
-  Then research risks for Phase {phase}: {phase_name}.
-  {shared_context}
-  Write to: {phase_dir}/research/risk-analysis.md",
-  subagent_type="general-purpose",
-  model="{RISK_MODEL}",
-  description="Research risks Phase {phase}"
-)
-
-Task(
-  prompt="First, read the ultra-ux-investigator agent definition.
-  Then research UX for Phase {phase}: {phase_name}.
-  {shared_context}
-  Write to: {phase_dir}/research/ux-investigation.md",
-  subagent_type="general-purpose",
-  model="{UX_MODEL}",
-  description="Research UX Phase {phase}"
-)
-```
-
-All spawn in parallel. Wait for all to complete.
+**If AGENT_TEAMS_MODE=false:** Spawn as Task(subagent_type="general-purpose"). All spawn in parallel. Wait for all to complete.
 </step>
 
 <step name="verify_outputs">
-Verify all perspective files were written:
-
 ```bash
 for f in pattern-analysis domain-expertise risk-analysis ux-investigation; do
-  [ -f "${PHASE_DIR}/research/${f}.md" ] && echo "✓ ${f}.md" || echo "✗ ${f}.md MISSING"
+  [ -f "${PHASE_DIR}/research/${f}.md" ] && echo "ok ${f}.md" || echo "MISSING ${f}.md"
 done
 ```
 
 If any missing: report which researcher failed, offer retry or continue with available perspectives.
 </step>
 
-<step name="synthesize">
-Display:
+<step name="delegate_synthesis">
+Display: `Synthesizing {N} perspectives into RESEARCH.md...`
+
+Spawn a synthesis subagent — lead does NOT read the perspective files:
+
 ```
-◆ Synthesizing {N} perspectives into RESEARCH.md...
-```
-
-Read all perspective files. The synthesizer has 3 jobs:
-
-**Job 1: Cross-Perspective Synthesis**
-Combine findings into a coherent research document.
-
-**Job 2: RELAY Integration**
-Read RELAY sections from each researcher. Weave cross-discoveries into the relevant sections of the synthesis. Note which RELAYs led to new insights vs. were already covered.
-
-**Job 3: Conflict Resolution**
-When researchers disagree (e.g., Domain Expert recommends library A, Risk Analyst flags library A as risky):
-
-```markdown
-## Conflicts Identified
-
-### Conflict 1: {Topic}
-**Perspective A ({researcher}):** {position}
-**Perspective B ({researcher}):** {position}
-**Resolution:** {resolved | unresolved}
-**Rationale:** {if resolved, why this position wins}
-**Action needed:** {if unresolved, flag for human review}
+Task(
+  prompt="You are the research synthesizer for Phase {phase}: {phase_name}.
+  Read these perspective files from {phase_dir}/research/:
+  - pattern-analysis.md, domain-expertise.md, risk-analysis.md, ux-investigation.md
+  Read ultra-conventions.md for the RESEARCH.md Synthesis Template and Synthesis Rules.
+  Read the context brief: {phase_dir}/.context-brief.md
+  Write synthesized output to: {phase_dir}/{padded_phase}-RESEARCH.md
+  Return a 3-line summary: perspectives count, conflicts count, key insight.",
+  subagent_type="general-purpose",
+  description="Synthesize research Phase {phase}"
+)
 ```
 
-Conflict resolution rules:
-1. **Safety > convenience** — Risk Analyst's concerns override Domain Expert's recommendations
-2. **Evidence > opinion** — the perspective with more concrete evidence wins
-3. **Flag when uncertain** — if neither side has clear evidence, mark as unresolved for human review
-4. **Document all conflicts** — even resolved ones, so the planner understands trade-offs
-
-Write synthesized RESEARCH.md:
-
-```markdown
-# Phase {X}: {Name} — Research (Ultra {N}-Perspective)
-
-**Researched:** {timestamp}
-**Perspectives:** {N} ({list of perspectives used})
-**Perspectives skipped:** {list and rationale, if any}
-**RELAYs processed:** {count}
-**Conflicts identified:** {count resolved} resolved, {count unresolved} unresolved
-
-## Synthesis Summary
-{2-3 paragraphs combining key findings from all perspectives}
-
-## User Constraints
-{from CONTEXT.md if exists — copied verbatim}
-
-## Standard Stack
-{from domain-expertise.md}
-
-## Architecture Patterns
-{from pattern-analysis.md + domain-expertise.md}
-
-## Code Patterns
-{from pattern-analysis.md}
-
-## Risk Assessment
-{from risk-analysis.md — critical/high risks}
-
-## Edge Cases
-{from risk-analysis.md}
-
-## UX Requirements
-{from ux-investigation.md — states, accessibility, responsive}
-
-## Don't Hand-Roll
-{from domain-expertise.md}
-
-## Common Pitfalls
-{merged from all perspectives}
-
-## Cross-Perspective Insights
-{findings that emerged from combining perspectives — things no single researcher would have caught}
-{Include RELAY-derived insights here}
-
-## Conflicts and Resolutions
-{from conflict resolution step — resolved and unresolved}
-
-## Open Questions
-{gaps from all perspectives + unresolved conflicts needing human input}
-
-## Sources
-{consolidated source list}
-```
-
-Write to: `${PHASE_DIR}/${PADDED_PHASE}-RESEARCH.md`
+Lead receives only the 3-line summary. RESEARCH.md is written by the subagent.
 </step>
 
 <step name="commit">
@@ -401,41 +161,14 @@ node ~/.claude/get-shit-done/bin/gsd-tools.js commit "docs(ultra): research swar
 <offer_next>
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- ULTRA ► RESEARCH SWARM COMPLETE ✓
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ULTRA > RESEARCH SWARM COMPLETE
 
-**Phase {X}: {Name}** — {N} perspectives synthesized
-
-| Perspective | Confidence | Key Finding | RELAYs Sent |
-|-------------|------------|-------------|-------------|
-| Pattern Analyst | {level} | {1-line} | {count} |
-| Domain Expert | {level} | {1-line} | {count} |
-| Risk Analyst | {level} | {1-line} | {count} |
-| UX Investigator | {level} | {1-line} | {count} |
-
+Phase {X}: {Name} — {N} perspectives synthesized
 Conflicts: {N resolved}, {M unresolved}
 Research: {phase_dir}/{padded_phase}-RESEARCH.md
 
-───────────────────────────────────────────────────────
-
-## ▶ Next Up
-
-**Adversarial Planning** — Builder/Critic debate loop
-
-/ultra:adversarial-plan {X}
-
-<sub>/clear first → fresh context window</sub>
+ > Next: /ultra:adversarial-plan {X}
+   /clear first for fresh context
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 </offer_next>
-
-<success_criteria>
-- [ ] Researcher count determined from scaling guidance
-- [ ] All researcher agents spawned in parallel
-- [ ] All perspective files written to research/ directory
-- [ ] RELAY sections processed and integrated
-- [ ] Conflicts between researchers identified and resolved (or flagged)
-- [ ] Perspectives synthesized into single RESEARCH.md
-- [ ] Cross-perspective insights identified
-- [ ] RESEARCH.md committed to git
-- [ ] User knows next step (adversarial-plan)
-</success_criteria>
