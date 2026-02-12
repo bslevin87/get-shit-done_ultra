@@ -19,7 +19,7 @@ Execute the full Ultra pipeline for a phase end-to-end. Chains all 5 stages with
 
 Pipeline: Research Swarm → Adversarial Plan → Parallel Execute → Adversarial Verify → Gap Close (if needed)
 
-Context budget: ~10% orchestrator per stage, 100% fresh per stage agent.
+Context budget: ~10% orchestrator per stage, 100% fresh per stage agent. Each stage workflow self-enforces its own context budget (context-by-reference, delegated synthesis) — the pipeline orchestrator does not need to manage context for individual stages.
 </objective>
 
 <context>
