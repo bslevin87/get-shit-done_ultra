@@ -1,14 +1,13 @@
 <purpose>
-Execute a Builder/Critic adversarial debate loop to create high-quality phase plans. The Builder creates plans, the Critic reviews them, and the loop continues until the Critic signals APPROVED (zero BLOCKERs) or max rounds (5) is reached.
-
-Replaces GSD's planner → plan-checker → revision loop with a more rigorous adversarial debate where both roles are specialized for their purpose.
+Execute a Builder/Critic adversarial debate loop to create high-quality phase plans. Loop continues until Critic signals APPROVED (zero BLOCKERs) or max rounds (5).
 </purpose>
 
-<core_principle>
-Plans improve through adversarial pressure. The Builder creates the best plan they can, the Critic finds real problems, and the Builder revises. This produces plans that survive scrutiny before execution begins, catching issues that cost 10x to fix during execution.
-
-Convergence = zero BLOCKERs. Warnings and suggestions are documented but don't block.
-</core_principle>
+<context_budget>
+Lead stays under 50% context. Enforced by:
+1. **Context-by-reference** — shared context written to `.context-brief.md`, not embedded in spawn prompts
+2. **Spawn brevity** — Builder/Critic prompts are role + file paths + protocol ref
+3. **Protocols by reference** — severity levels, convergence, auction rules live in `ultra-conventions.md`
+</context_budget>
 
 <process>
 
@@ -32,262 +31,91 @@ CRITIC_MODEL=$(echo "$ULTRA_CONFIG" | node -pe "JSON.parse(require('fs').readFil
 
 Fallback: both use `gsd-planner` model from gsd-tools.js.
 
-Read file contents from INIT --include:
-```bash
-STATE_CONTENT, ROADMAP_CONTENT, REQUIREMENTS_CONTENT, CONTEXT_CONTENT, RESEARCH_CONTENT
-```
-
 Set MAX_ROUNDS=5, current_round=1.
 </step>
 
 <step name="detect_agent_teams" priority="after-init">
-Check if Agent Teams is available for native multi-agent coordination:
-
-1. Check env: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
-   ```bash
-   AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
-   ```
-2. Verify Claude Code supports Agent Teams (Opus 4.6+ with experimental flag)
-
-Set coordination mode:
-- `AGENT_TEAMS_MODE=true` → Builder/Critic debate via native teammate messaging
-- `AGENT_TEAMS_MODE=false` → Sequential Task() subagent calls (existing behavior, default)
-
 ```bash
-if [ "$AGENT_TEAMS_ENV" = "1" ]; then
-  AGENT_TEAMS_MODE=true
-else
-  AGENT_TEAMS_MODE=false
-fi
+AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+AGENT_TEAMS_MODE=$( [ "$AGENT_TEAMS_ENV" = "1" ] && echo true || echo false )
 ```
 
-Display:
-```
-◆ Coordination: Agent Teams (native)    ← if AGENT_TEAMS_MODE=true
-◆ Coordination: Task() subagents        ← if AGENT_TEAMS_MODE=false
-```
+Display: `Coordination: {Agent Teams (native) | Task() subagents}`
 
-**Both paths produce identical outputs** — same PLAN.md files, same approval flow, same convergence logic. Only the debate transport differs.
+Both paths produce identical PLAN.md files and approval flow.
 </step>
 
 <step name="check_research">
 If RESEARCH.md missing and research is enabled:
 ```
-⚠ No RESEARCH.md found. Run /ultra:research-swarm {phase} first for best results.
-   Proceeding without research...
+Warning: No RESEARCH.md found. Run /ultra:research-swarm {phase} first for best results.
+Proceeding without research...
 ```
 </step>
 
-<step name="build_context">
-Construct shared planning context:
+<step name="write_context_brief">
+Write `{phase_dir}/.context-brief.md` with planning context (format in `ultra-conventions.md`):
 
-```markdown
-<planning_context>
-**Phase:** {phase_number} - {phase_name}
-**Goal:** {phase goal from roadmap}
-
-**Project State:** {state_content}
-**Roadmap:** {roadmap_content}
-**Requirements:** {requirements_content}
-
-**User Decisions (CONTEXT.md):**
-{context_content}
-
-**Research (4-perspective):**
-{research_content}
-
-**Domains:** Read DOMAINS.md for domain decomposition and file ownership.
-**Ultra Config:** Read gsd-ultra.json for pipeline configuration.
-</planning_context>
+```bash
+STATE_CONTENT=$(echo "$INIT" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).state_content || ''")
+ROADMAP_CONTENT=$(echo "$INIT" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).roadmap_content || ''")
+REQUIREMENTS_CONTENT=$(echo "$INIT" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).requirements_content || ''")
+CONTEXT_CONTENT=$(echo "$INIT" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).context_content || ''")
+RESEARCH_CONTENT=$(echo "$INIT" | node -pe "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).research_content || ''")
 ```
+
+Include: phase info, roadmap, requirements, user decisions, research summary (first 5 lines of RESEARCH.md).
+Also note: "Read CLAUDE.md, DOMAINS.md, gsd-ultra.json from project root."
 </step>
 
 <step name="debate_loop">
 Display banner:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- ULTRA ► ADVERSARIAL PLANNING — PHASE {X}
+ ULTRA > ADVERSARIAL PLANNING — PHASE {X}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Coordination: {Agent Teams (native) | Task() subagents}
+Coordination: {Agent Teams (native) | Task() subagents}
 ```
 
-### If AGENT_TEAMS_MODE=true — Native Teammate Debate
+**Debate spawn spec:**
 
-Lead spawns Builder and Critic as **persistent teammates**:
+| Role | Agent Def | Model | Job |
+|------|-----------|-------|-----|
+| Builder | ultra-builder | {BUILDER_MODEL} | Create/revise PLAN.md files in {phase_dir}/ |
+| Critic | ultra-critic | {CRITIC_MODEL} | Review with BLOCKER/WARNING/SUGGESTION; signal APPROVED when 0 BLOCKERs |
 
+**Prompt template for both roles:**
 ```
-Teammate(
-  name="builder",
-  prompt="First, read the ultra-builder agent definition.
-  You are the Builder for Phase {phase}: {phase_name}.
-  {planning_context}
-  Read CLAUDE.md, DOMAINS.md, and gsd-ultra.json from the project root.
-
-  DEBATE PROTOCOL (Agent Teams mode):
-  1. Create plans and write PLAN.md files to: {phase_dir}/
-  2. Message the 'critic' teammate when plans are ready
-  3. Critic will message you back with BLOCKER/WARNING/SUGGESTION findings
-  4. Address all BLOCKERs, revise plans, message Critic again
-  5. Continue until Critic messages 'APPROVED' or lead intervenes at max rounds
-
-  Write PLAN.md files to: {phase_dir}/",
-  model="{BUILDER_MODEL}"
-)
-
-Teammate(
-  name="critic",
-  prompt="First, read the ultra-critic agent definition.
-  You are the Critic for Phase {phase}: {phase_name}.
-  {planning_context}
-  Read CLAUDE.md, DOMAINS.md, and gsd-ultra.json from the project root.
-
-  DEBATE PROTOCOL (Agent Teams mode):
-  1. Wait for Builder to message you with plans
-  2. Read PLAN.md files from: {phase_dir}/
-  3. Review with BLOCKER/WARNING/SUGGESTION classifications
-  4. Message Builder directly with your findings
-  5. If 0 BLOCKERs: message Builder with 'APPROVED' and message lead
-  6. If BLOCKERs remain: message Builder with feedback for revision
-
-  Maximum rounds: {MAX_ROUNDS}",
-  model="{CRITIC_MODEL}"
-)
+Read the {agent_def} agent definition.
+You are the {role} for Phase {phase}: {phase_name}.
+Read context brief: {phase_dir}/.context-brief.md
+Read ultra-conventions.md for severity levels, convergence, max rounds.
+Read CLAUDE.md, DOMAINS.md, gsd-ultra.json from project root.
+{role_specific_instructions}
 ```
 
-**Debate happens via native messaging** — rounds proceed without orchestrator shuttling:
-- Builder creates plans → messages Critic
-- Critic reviews → messages Builder with BLOCKER/WARNING/SUGGESTION
-- Builder revises → messages Critic again
-- Loop until Critic messages "APPROVED" (0 BLOCKERs)
+**If AGENT_TEAMS_MODE=true:** Spawn Builder and Critic as persistent Teammate(). Debate happens via native messaging. Lead monitors round count and intervenes at MAX_ROUNDS.
 
-**Lead monitors** via message stream:
-- Tracks round count
-- Intervenes at max rounds ({MAX_ROUNDS})
-- Convergence: Critic messages lead with "APPROVED"
+**If AGENT_TEAMS_MODE=false:** Sequential Task() calls:
+1. Builder creates plans -> lead reads plan file list (not content)
+2. Critic reviews plans (reads files directly) -> returns APPROVED or REVISE with feedback
+3. If REVISE: Builder revises with Critic feedback injected -> loop back to Critic
+4. Increment current_round each loop
 
-**Both still write PLAN.md files** (same output format, same paths).
+**Convergence:** Critic returns "APPROVED" (0 BLOCKERs). See `ultra-conventions.md` for severity levels.
 
-### If AGENT_TEAMS_MODE=false — Task() Subagents (existing behavior)
-
-**Round 1: Initial Build**
-
+**Max rounds handling (both modes):**
 ```
-◆ Round 1/{MAX_ROUNDS} — Builder creating plans...
+Warning: Max rounds ({MAX_ROUNDS}) reached. {N} BLOCKERs remain.
+Options: 1. Force proceed  2. Provide guidance  3. Abort
 ```
-
-```
-Task(
-  prompt="First, read the ultra-builder agent definition.
-  Then create plans for Phase {phase}: {phase_name}.
-  {planning_context}
-  Read CLAUDE.md, DOMAINS.md, and gsd-ultra.json from the project root.
-  Write PLAN.md files to: {phase_dir}/",
-  subagent_type="general-purpose",
-  model="{BUILDER_MODEL}",
-  description="Build plans Phase {phase}"
-)
-```
-
-**After Builder returns:**
-
-Read created plans:
-```bash
-PLANS_CONTENT=$(cat "${PHASE_DIR}"/*-PLAN.md 2>/dev/null)
-PLAN_COUNT=$(ls "${PHASE_DIR}"/*-PLAN.md 2>/dev/null | wc -l)
-```
-
-Display: `Builder created {PLAN_COUNT} plans. Sending to Critic...`
-
-**Critic Review:**
-
-```
-◆ Round {N}/{MAX_ROUNDS} — Critic reviewing plans...
-```
-
-```
-Task(
-  prompt="First, read the ultra-critic agent definition.
-  Then review these plans for Phase {phase}: {phase_name}.
-  Round: {current_round}
-
-  <plans>
-  {plans_content}
-  </plans>
-
-  {planning_context}
-  Read CLAUDE.md, DOMAINS.md, and gsd-ultra.json from the project root.",
-  subagent_type="general-purpose",
-  model="{CRITIC_MODEL}",
-  description="Critique plans Phase {phase} R{N}"
-)
-```
-
-**After Critic returns:**
-
-Parse verdict: APPROVED or REVISE
-
-**If APPROVED:**
-```
-✓ Critic APPROVED plans (Round {N}/{MAX_ROUNDS})
-  BLOCKERs: 0 | Warnings: {N} | Suggestions: {N}
-```
-→ Proceed to finalize.
-
-**If REVISE and current_round < MAX_ROUNDS:**
-```
-↻ Critic found {N} BLOCKERs. Sending back to Builder... (Round {N+1}/{MAX_ROUNDS})
-```
-
-Extract Critic feedback. Send to Builder for revision:
-
-```
-Task(
-  prompt="First, read the ultra-builder agent definition.
-  Then REVISE plans for Phase {phase}: {phase_name}.
-  This is revision round {current_round + 1}.
-
-  <current_plans>
-  {plans_content}
-  </current_plans>
-
-  <critic_feedback>
-  {critic_return}
-  </critic_feedback>
-
-  {planning_context}
-  Address all BLOCKERs. Consider WARNINGs.
-  Write updated PLAN.md files to: {phase_dir}/",
-  subagent_type="general-purpose",
-  model="{BUILDER_MODEL}",
-  description="Revise plans Phase {phase} R{N}"
-)
-```
-
-Increment current_round. Loop back to Critic Review.
-
-### Max Rounds Handling (both modes)
-
-**If REVISE and current_round >= MAX_ROUNDS:**
-```
-⚠ Max rounds ({MAX_ROUNDS}) reached. {N} BLOCKERs remain.
-
-Remaining issues:
-{list of unresolved BLOCKERs}
-
-Options:
-1. Force proceed (accept remaining issues)
-2. Provide guidance and retry
-3. Abort planning
-```
-
 Wait for user input.
 </step>
 
 <step name="finalize">
-Read final plans:
+Read final plan file list:
 ```bash
-PLANS_CONTENT=$(cat "${PHASE_DIR}"/*-PLAN.md 2>/dev/null)
+PLAN_COUNT=$(ls "${PHASE_DIR}"/*-PLAN.md 2>/dev/null | wc -l)
 ```
 
 Commit:
@@ -303,36 +131,13 @@ Update ROADMAP.md with plan count and objectives.
 <offer_next>
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- ULTRA ► ADVERSARIAL PLANNING COMPLETE ✓
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ULTRA > ADVERSARIAL PLANNING COMPLETE
 
-**Phase {X}: {Name}** — {N} plans, approved round {R}/{MAX}
-
-| Wave | Plans | Domains | Autonomous |
-|------|-------|---------|------------|
-| {wave} | {plans} | {domains} | {auto} |
-
+Phase {X}: {Name} — {N} plans, approved round {R}/{MAX}
 Debate: {rounds} rounds, {total_blockers} blockers resolved
-Warnings: {N} acknowledged | Suggestions: {N} incorporated
 
-───────────────────────────────────────────────────────
-
-## ▶ Next Up
-
-**Parallel Execute** — Domain-owned execution
-
-/ultra:parallel-execute {X}
-
-<sub>/clear first → fresh context window</sub>
+ > Next: /ultra:parallel-execute {X}
+   /clear first for fresh context
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 </offer_next>
-
-<success_criteria>
-- [ ] Builder created initial plans
-- [ ] Critic reviewed plans with severity classification
-- [ ] Debate loop ran until APPROVED or max rounds
-- [ ] All BLOCKERs resolved (or user force-proceeded)
-- [ ] Plans committed to git
-- [ ] ROADMAP.md updated
-- [ ] User knows next step (parallel-execute)
-</success_criteria>
