@@ -1,22 +1,15 @@
 <purpose>
 Execute a 3-round adversarial verification with Defender, Attacker, and Auditor agents.
-
-**Round 1:** Independent assessment (parallel) — each agent evaluates the phase independently.
-**Round 2:** Structured debate — Attacker presents findings, Defender responds, Auditor rules.
-**Round 3:** Consensus (if needed) — only for unresolved disputes after Round 2.
-
-The 3-round structure produces better verdicts than parallel-only verification because agents respond to each other's evidence rather than working in isolation.
+Round 1: Independent assessment (parallel). Round 2: Structured debate. Round 3: Consensus (if needed).
 </purpose>
 
-<core_principle>
-Three rounds catch what one round misses:
-
-- **Round 1** catches the obvious: stubs, missing files, convention violations
-- **Round 2** catches the subtle: whether "evidence" actually proves the claim, whether "findings" are real issues or misunderstandings
-- **Round 3** catches the contentious: issues where reasonable agents disagree, requiring structured consensus
-
-Consensus detection: when all 3 roles flag the same issue independently in Round 1, it's a very strong signal — the most reliable finding in the entire process.
-</core_principle>
+<context_budget>
+Lead stays under 50% context. Enforced by:
+1. **Context-by-reference** — verification context written to `.context-brief.md`
+2. **Delegated verdict synthesis** — Task() subagent reads all reports and writes VERIFICATION.md; lead receives verdict line only
+3. **Spawn brevity** — verifier prompts are role + file paths + protocol ref
+4. **Protocols by reference** — finding IDs, debate protocol, verdict logic, VERIFICATION.md template live in `ultra-conventions.md`
+</context_budget>
 
 <process>
 
@@ -43,302 +36,95 @@ Fallback: use `gsd-verifier` model for all 3.
 </step>
 
 <step name="detect_agent_teams" priority="after-init">
-Check if Agent Teams is available for native multi-agent coordination:
-
-1. Check env: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
-   ```bash
-   AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
-   ```
-2. Verify Claude Code supports Agent Teams (Opus 4.6+ with experimental flag)
-
-Set coordination mode:
-- `AGENT_TEAMS_MODE=true` → live debate via native teammate messaging (biggest win)
-- `AGENT_TEAMS_MODE=false` → Task() subagents + debate moderator (existing behavior, default)
-
 ```bash
-if [ "$AGENT_TEAMS_ENV" = "1" ]; then
-  AGENT_TEAMS_MODE=true
-else
-  AGENT_TEAMS_MODE=false
-fi
+AGENT_TEAMS_ENV=$(echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}")
+AGENT_TEAMS_MODE=$( [ "$AGENT_TEAMS_ENV" = "1" ] && echo true || echo false )
 ```
 
-Display:
-```
-◆ Coordination: Agent Teams (native)    ← if AGENT_TEAMS_MODE=true
-◆ Coordination: Task() subagents        ← if AGENT_TEAMS_MODE=false
-```
+Display: `Coordination: {Agent Teams (native) | Task() subagents}`
 
-**Both paths produce identical outputs** — same DEFENSE/ATTACK/AUDIT/DEBATE.md files, same VERIFICATION.md, same verdict logic. Agent Teams mode replaces file-serialized debate with live messaging — the biggest win in this upgrade.
+Both paths produce identical DEFENSE/ATTACK/AUDIT/DEBATE.md + VERIFICATION.md. Agent Teams replaces file-serialized debate with live messaging.
 </step>
 
-<step name="prepare">
-Read phase artifacts:
+<step name="write_context_brief">
+Write `{phase_dir}/.context-brief.md` with verification context:
+
 ```bash
 ls "${PHASE_DIR}"/*-PLAN.md 2>/dev/null
 ls "${PHASE_DIR}"/*-SUMMARY.md 2>/dev/null
 ```
 
-Build verification context:
-```markdown
-<verification_context>
-**Phase:** {phase_number} - {phase_name}
-**Goal:** {phase goal from ROADMAP.md}
-**Phase directory:** {phase_dir}
-
-Read the PLAN.md, SUMMARY.md files in the phase directory.
-Read CLAUDE.md, DOMAINS.md, REQUIREMENTS.md from project root.
-Read gsd-ultra.json for pipeline configuration.
-Examine the actual source code in src/.
-</verification_context>
-```
+Include: phase info, goal from ROADMAP.md, phase directory path.
+Note: "Read PLAN.md, SUMMARY.md files in phase directory. Read CLAUDE.md, DOMAINS.md, REQUIREMENTS.md, gsd-ultra.json from project root. Examine actual source code in src/."
 </step>
 
 <step name="round_1_independent">
 Display banner:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- ULTRA ► ADVERSARIAL VERIFICATION — PHASE {X}
+ ULTRA > ADVERSARIAL VERIFICATION — PHASE {X}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-◆ Round 1: Independent Assessment (parallel)
-  → Defender  ({DEFENDER_MODEL}) — building the case FOR
-  → Attacker  ({ATTACKER_MODEL}) — finding what's BROKEN
-  → Auditor   ({AUDITOR_MODEL}) — checking COMPLIANCE
-◆ Coordination: {Agent Teams (native) | Task() subagents}
+Round 1: Independent Assessment (parallel)
+  > Defender  ({DEFENDER_MODEL})
+  > Attacker  ({ATTACKER_MODEL})
+  > Auditor   ({AUDITOR_MODEL})
+Coordination: {Agent Teams (native) | Task() subagents}
 ```
 
-### If AGENT_TEAMS_MODE=true — Spawn as Persistent Teammates
+**Verifier spawn spec:**
 
-Spawn all 3 as **teammates** (they persist through all 3 rounds):
+| Role | Agent Def | Output File | ID Format | Model |
+|------|-----------|-------------|-----------|-------|
+| Defender | ultra-defender | DEFENSE.md | DEF-{N} | {DEFENDER_MODEL} |
+| Attacker | ultra-attacker | ATTACK.md | ATK-{N} | {ATTACKER_MODEL} |
+| Auditor | ultra-auditor | AUDIT.md | compliance score | {AUDITOR_MODEL} |
 
+**Prompt template (all 3 roles):**
 ```
-Teammate(
-  name="defender",
-  prompt="First, read the ultra-defender agent definition.
-  You are the Defender for Phase {phase}: {phase_name}.
-  {verification_context}
-
-  ROUND 1: Independent assessment.
-  Write DEFENSE.md to: {phase_dir}/
-  Use DEF-{N} IDs for all evidence points.
-  Include an evidence matrix with file:line references.
-  Message lead when Round 1 output is complete.
-
-  ROUND 2 (Agent Teams debate):
-  Attacker will message you with each ATK-N finding.
-  For each finding, respond to Attacker with:
-  - CONCEDE: acknowledge the issue
-  - DISPUTE: provide file:line counter-evidence
-  Message Auditor with your response so they can rule.
-
-  Write your outputs to files AND participate in live debate.",
-  model="{DEFENDER_MODEL}"
-)
-
-Teammate(
-  name="attacker",
-  prompt="First, read the ultra-attacker agent definition.
-  You are the Attacker for Phase {phase}: {phase_name}.
-  {verification_context}
-
-  ROUND 1: Independent assessment.
-  Write ATTACK.md to: {phase_dir}/
-  Use ATK-{N} IDs for all findings.
-  Tag each with composite perspective (critic/security-auditor/edge-case-hunter).
-  Message lead when Round 1 output is complete.
-
-  ROUND 2 (Agent Teams debate):
-  For each HIGH or CRITICAL finding (non-consensus):
-  1. Message 'defender' with: ATK-ID, severity, evidence, challenge
-  2. Wait for Defender's CONCEDE/DISPUTE response
-  3. Message 'auditor' with the exchange for ruling
-
-  Present findings one at a time for structured debate.",
-  model="{ATTACKER_MODEL}"
-)
-
-Teammate(
-  name="auditor",
-  prompt="First, read the ultra-auditor agent definition.
-  You are the Auditor for Phase {phase}: {phase_name}.
-  {verification_context}
-
-  ROUND 1: Independent assessment.
-  Write AUDIT.md to: {phase_dir}/
-  Calculate compliance score with weighted dimensions.
-  Message lead when Round 1 output is complete.
-
-  ROUND 2 (Agent Teams debate):
-  Observe Attacker/Defender message exchanges.
-  For each debated finding, rule:
-  - SUSTAINED: Attacker's finding stands
-  - OVERRULED: Defender's evidence disproves it
-  - SPLIT: requires Round 3 consensus
-  Message lead with each ruling.
-
-  After all findings debated, write DEBATE.md to: {phase_dir}/
-  with the complete debate record.",
-  model="{AUDITOR_MODEL}"
-)
+Read the {agent_def} agent definition.
+You are the {role} for Phase {phase}: {phase_name}.
+Read context brief: {phase_dir}/.context-brief.md
+Read ultra-conventions.md for finding IDs, debate protocol, verdict logic.
+Write {output_file} to: {phase_dir}/
+{role_specific_round1_instructions}
 ```
 
-Wait for all 3 to signal Round 1 complete (TeammateIdle or lead message).
+**If AGENT_TEAMS_MODE=true:** Spawn as persistent Teammate() (they persist through all rounds). Include Round 2 debate instructions in spawn prompt. Lead enters delegate mode.
 
-### If AGENT_TEAMS_MODE=false — Task() Subagents (existing behavior)
+**If AGENT_TEAMS_MODE=false:** Spawn as Task(subagent_type="general-purpose") in parallel. Wait for all 3 to complete.
 
-Spawn all 3 in parallel:
-
-```
-Task(
-  prompt="First, read the ultra-defender agent definition.
-  Then build a defense for Phase {phase}: {phase_name}.
-  {verification_context}
-  Write DEFENSE.md to: {phase_dir}/
-  Use DEF-{N} IDs for all evidence points.
-  Include an evidence matrix with file:line references.",
-  subagent_type="general-purpose",
-  model="{DEFENDER_MODEL}",
-  description="Defend Phase {phase}"
-)
-
-Task(
-  prompt="First, read the ultra-attacker agent definition.
-  Then attack Phase {phase}: {phase_name}.
-  {verification_context}
-  Write ATTACK.md to: {phase_dir}/
-  Use ATK-{N} IDs for all findings.
-  Tag each finding with composite perspective (critic/security-auditor/edge-case-hunter).",
-  subagent_type="general-purpose",
-  model="{ATTACKER_MODEL}",
-  description="Attack Phase {phase}"
-)
-
-Task(
-  prompt="First, read the ultra-auditor agent definition.
-  Then audit Phase {phase}: {phase_name}.
-  {verification_context}
-  Write AUDIT.md to: {phase_dir}/
-  Calculate compliance score with weighted dimensions.",
-  subagent_type="general-purpose",
-  model="{AUDITOR_MODEL}",
-  description="Audit Phase {phase}"
-)
-```
-
-Wait for all 3 to complete.
-
-### Verify Round 1 outputs (both modes):
-
+**Verify Round 1 outputs:**
 ```bash
 for f in DEFENSE ATTACK AUDIT; do
-  [ -f "${PHASE_DIR}/${f}.md" ] && echo "✓ ${f}.md" || echo "✗ ${f}.md MISSING"
+  [ -f "${PHASE_DIR}/${f}.md" ] && echo "ok ${f}.md" || echo "MISSING ${f}.md"
 done
 ```
 </step>
 
 <step name="consensus_detection">
-Before debate, check for consensus findings — issues flagged by all 3 roles:
+Before debate, check for consensus findings — issues flagged by all 3 roles.
 
-Read DEFENSE.md (honest gaps), ATTACK.md (findings), AUDIT.md (non-compliance).
-Cross-reference to find issues all 3 mention.
-
-```markdown
-## Pre-Debate Consensus
-{N} issues flagged by all 3 roles → VERY STRONG signal
-
-| Issue | Defender | Attacker | Auditor |
-|-------|----------|----------|---------|
-| {issue} | Honest Gap | ATK-{N} | Non-compliance |
-```
+Lead reads only the finding IDs/titles from each report (not full content). Cross-reference to find issues all 3 mention.
 
 Consensus findings skip debate — they're automatically confirmed.
 </step>
 
 <step name="round_2_debate">
-Display:
-```
-◆ Round 2: Structured Debate
-  → Attacker presents {N} findings
-  → Defender responds to each
-  → Auditor rules on disputes
-```
+Display: `Round 2: Structured Debate — {N} findings to debate`
 
-**Only run debate if Attacker has HIGH or CRITICAL findings that aren't consensus findings.**
+Only run if Attacker has HIGH or CRITICAL findings that aren't consensus findings.
 
-If all Attacker findings are LOW/MEDIUM, or all are consensus findings, skip to verdict.
+**If AGENT_TEAMS_MODE=true:** Lead messages Attacker to begin debate. Teammates exchange findings via native messaging. Auditor messages lead with each ruling (SUSTAINED/OVERRULED/SPLIT). Auditor writes DEBATE.md after all findings debated.
 
-### If AGENT_TEAMS_MODE=true — Live Debate via Native Messaging
-
-**This is the biggest win of the Agent Teams upgrade.** The debate happens in real-time via the mailbox — no debate moderator Task() needed.
-
-The 3 teammates spawned in Round 1 are still alive. Lead messages Attacker to begin debate:
-
-```
-Lead → Attacker: "Begin Round 2 debate. Present HIGH/CRITICAL findings
-  (non-consensus) to Defender one at a time."
-```
-
-**Debate flow (all via native messaging):**
-
-For each ATK-{N} finding (HIGH or CRITICAL, non-consensus):
-1. **Attacker** messages **Defender**: ATK-ID, severity, evidence, challenge
-2. **Defender** messages **Attacker**: CONCEDE or DISPUTE (with file:line counter-evidence)
-3. **Attacker** messages **Auditor**: the exchange for ruling
-4. **Auditor** messages **lead**: ruling — SUSTAINED / OVERRULED / SPLIT
-
-**Lead tracks rulings** from Auditor messages. No file serialization between rounds.
-
-**Consensus detection:** If all 3 teammates independently message lead about the same issue → auto-confirmed finding (strongest signal).
-
-After all findings debated:
-- **Auditor writes DEBATE.md** (same format as Task() path) for the record
-- Lead collects all rulings from message stream
-
-### If AGENT_TEAMS_MODE=false — Debate Moderator Task() (existing behavior)
-
-Run debate as a single agent call with all 3 reports as context:
-
+**If AGENT_TEAMS_MODE=false:** Spawn debate moderator Task():
 ```
 Task(
-  prompt="You are the debate moderator for Phase {phase} adversarial verification.
-
-  Read these 3 reports:
-  - DEFENSE.md (DEF-{N} evidence)
-  - ATTACK.md (ATK-{N} findings)
-  - AUDIT.md (compliance score)
-
-  Run the structured debate:
-
-  For each ATK-{N} finding (HIGH or CRITICAL, non-consensus):
-  1. Attacker presents: severity, evidence, challenge to Defender
-  2. Defender responds: CONCEDE or DISPUTE (with file:line counter-evidence)
-  3. Auditor rules: SUSTAINED (Attacker wins) / OVERRULED (Defender wins) / SPLIT
-
-  Write DEBATE.md to: {phase_dir}/
-
-  Format:
-  # Debate Results — Phase {X}
-
-  ## Debated Findings
-  | ATK-ID | Attacker | Defender Response | Auditor Ruling | Final Severity |
-  |--------|----------|-------------------|----------------|----------------|
-
-  ## Detailed Debate
-  ### ATK-{N}: {title}
-  **Attacker:** {evidence}
-  **Defender:** {CONCEDE|DISPUTE} — {reasoning}
-  **Auditor:** {SUSTAINED|OVERRULED|SPLIT} — {basis}
-  **Final severity:** {adjusted}
-
-  ## Consensus Findings (auto-confirmed)
-  {list from pre-debate consensus}
-
-  ## Debate Summary
-  - Findings sustained: {N}
-  - Findings overruled: {N}
-  - Findings split: {N}
-  - Consensus findings: {N}",
+  prompt="You are the debate moderator for Phase {phase}.
+  Read DEFENSE.md, ATTACK.md, AUDIT.md from {phase_dir}/.
+  Read ultra-conventions.md for debate protocol and ruling format.
+  Run structured debate for HIGH/CRITICAL non-consensus findings.
+  Write DEBATE.md to: {phase_dir}/",
   subagent_type="general-purpose",
   model="{ATTACKER_MODEL}",
   description="Debate Phase {phase}"
@@ -347,136 +133,33 @@ Task(
 </step>
 
 <step name="round_3_consensus">
-**Only if Round 2 has unresolved disputes** (SPLIT rulings where severity is contested).
-
-Display:
-```
-◆ Round 3: Consensus (resolving {N} disputes)
-```
-
-For each SPLIT ruling, the orchestrator makes a final call based on:
+Only if Round 2 has SPLIT rulings. The orchestrator resolves based on:
 1. Weight of evidence (file:line references vs. assertions)
-2. Severity precedent (safety concerns > style concerns)
-3. Consensus overlap (if 2 of 3 agree, that wins)
+2. Severity precedent (safety > style)
+3. Consensus overlap (2 of 3 agree wins)
 
-Most phases won't need Round 3. It's the safety valve.
+Most phases won't need Round 3.
 </step>
 
-<step name="synthesize_verdict">
-Display:
+<step name="delegate_verdict_synthesis">
+Display: `Synthesizing verdict...`
+
+Spawn a verdict synthesis subagent — lead does NOT read the full reports:
+
 ```
-◆ Synthesizing verdict from 3 perspectives + debate...
-```
-
-Read all reports (DEFENSE.md, ATTACK.md, AUDIT.md, DEBATE.md if exists).
-
-**Verdict logic (same thresholds, enhanced with debate adjustments):**
-
-After debate, some findings are withdrawn (overruled) or adjusted (split). Use adjusted findings:
-
-**PASS** — All of:
-- Defender: ≥90% must-haves verified with STRONG evidence
-- Attacker: 0 critical findings (post-debate), ≤2 high findings (post-debate)
-- Auditor: ≥90% compliance score
-- Consensus: 0 consensus findings unresolved
-
-**CONDITIONAL_PASS** — All of:
-- Defender: ≥70% must-haves verified
-- Attacker: 0 critical findings (post-debate) (highs OK)
-- Auditor: ≥70% compliance score
-- No single issue flagged by all 3 roles remains unresolved
-
-**FAIL** — Any of:
-- Defender: <70% must-haves verified
-- Attacker: ≥1 critical finding (post-debate)
-- Auditor: <70% compliance
-- Consensus failure remains unresolved
-
-Write enhanced VERIFICATION.md:
-
-```markdown
----
-phase: {phase_dir_name}
-verified: {timestamp}
-status: {passed|gaps_found|human_needed}
-verdict: {PASS|CONDITIONAL_PASS|FAIL}
-score: {N}/{M} must-haves verified
-defense_score: {defender_pct}%
-attack_findings: {critical}/{high}/{medium}/{low}
-attack_findings_post_debate: {critical}/{high}/{medium}/{low}
-audit_compliance: {auditor_pct}%
-debate_rounds: {1|2|3}
-consensus_findings: {count}
-gaps:
-  - truth: "{failed truth}"
-    status: failed
-    reason: "{evidence from attacker}"
-    artifacts:
-      - path: "{file}"
-        issue: "{from attacker or auditor}"
-    missing:
-      - "{what needs fixing}"
----
-
-# Phase {X}: {Name} — Adversarial Verification Report
-
-**Phase Goal:** {goal}
-**Verified:** {timestamp}
-**Verdict:** {PASS | CONDITIONAL_PASS | FAIL}
-
-## Executive Summary
-
-{2-3 sentence summary of the verification outcome, highlighting key strengths and weaknesses}
-
-## Verdict Rationale
-
-### Defender Assessment
-{summary from DEFENSE.md}
-Score: {N}/{M} must-haves ({pct}%)
-Evidence strength: STRONG: {N}, MODERATE: {M}, WEAK: {P}
-
-### Attacker Assessment
-{summary from ATTACK.md}
-Findings (pre-debate): {critical} critical, {high} high, {medium} medium, {low} low
-Findings (post-debate): {critical} critical, {high} high, {medium} medium, {low} low
-
-### Auditor Assessment
-{summary from AUDIT.md}
-Compliance: {pct}%
-
-## Evidence Matrix (from Defender)
-
-| ID | Requirement | Evidence | File:Line | Status |
-|----|-------------|----------|-----------|--------|
-{from DEFENSE.md evidence matrix}
-
-## Debate Results (Round 2)
-
-| ATK-ID | Finding | Defender Response | Auditor Ruling | Final Severity |
-|--------|---------|-------------------|----------------|----------------|
-{from DEBATE.md}
-
-## Consensus Findings
-
-{issues flagged by all 3 — strongest signals}
-
-## Must-Have Status (Combined)
-
-| Must-Have | Defender | Attacker | Auditor | Debate | Final |
-|-----------|----------|----------|---------|--------|-------|
-| {truth} | {status} | {status} | {status} | {ruling} | {status} |
-
-## Gaps (If Any)
-{structured gaps in YAML frontmatter format for /ultra:gap-close}
-
-## Human Verification Needed
-{items requiring human testing}
-
-## Recommendations
-{what to do next based on verdict}
+Task(
+  prompt="Synthesize the adversarial verification verdict for Phase {phase}: {phase_name}.
+  Read from {phase_dir}/: DEFENSE.md, ATTACK.md, AUDIT.md, DEBATE.md (if exists).
+  Read ultra-conventions.md for VERIFICATION.md Template and Verdict Thresholds.
+  Read context brief: {phase_dir}/.context-brief.md
+  Write VERIFICATION.md to: {phase_dir}/{padded_phase}-VERIFICATION.md
+  Return ONE line: VERDICT={PASS|CONDITIONAL_PASS|FAIL} score={N}/{M} gaps={N}",
+  subagent_type="general-purpose",
+  description="Synthesize verdict Phase {phase}"
+)
 ```
 
-Write to: `${PHASE_DIR}/${PADDED_PHASE}-VERIFICATION.md`
+Lead receives only the verdict line. VERIFICATION.md is written by the subagent.
 </step>
 
 <step name="commit">
@@ -496,79 +179,22 @@ Output based on verdict:
 **If PASS:**
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- ULTRA ► VERIFICATION PASSED ✓
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+ ULTRA > VERIFICATION PASSED
 Phase {X}: {Name} — PASS
-
-| Role | Score | Summary |
-|------|-------|---------|
-| Defender | {N}/{M} ({pct}%) | {1-line} |
-| Attacker | {findings post-debate} | {1-line} |
-| Auditor | {pct}% | {1-line} |
-
-Debate: {N} findings debated, {M} sustained, {P} overruled
-Consensus: {N} consensus findings (all resolved)
-
-Phase complete! Run the knowledge flywheel:
-
-/ultra:retrospective {X}
+ > Next: /ultra:retrospective {X}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 **If CONDITIONAL_PASS:**
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- ULTRA ► CONDITIONAL PASS ⚠
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 Phase {X}: {Name} — CONDITIONAL_PASS
-
-Conditions:
-{list of conditions/warnings}
-
-Options:
-1. Accept and proceed → /ultra:retrospective {X}
-2. /ultra:gap-close {X} — fix remaining issues
+Options: 1. Accept > /ultra:retrospective {X}  2. /ultra:gap-close {X}
 ```
 
 **If FAIL:**
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- ULTRA ► VERIFICATION FAILED ✗
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 Phase {X}: {Name} — FAIL
-
-Critical Issues:
-{from attacker's critical findings post-debate}
-
-Consensus Failures:
-{from consensus findings}
-
-Gaps:
-{from synthesized gaps}
-
-───────────────────────────────────────────────────────
-
-## ▶ Next Up
-
-**Gap Close** — fix gaps and re-verify
-
-/ultra:gap-close {X}
-
-<sub>/clear first → fresh context window</sub>
+ > Next: /ultra:gap-close {X}
+   /clear first for fresh context
 ```
 </offer_next>
-
-<success_criteria>
-- [ ] Round 1: All 3 verifier agents spawned in parallel
-- [ ] Round 1: DEFENSE.md, ATTACK.md, AUDIT.md written with IDs
-- [ ] Consensus detection: cross-role issues identified
-- [ ] Round 2: Structured debate for HIGH/CRITICAL findings (if applicable)
-- [ ] Round 2: DEBATE.md written with rulings
-- [ ] Round 3: Unresolved disputes resolved (if needed)
-- [ ] Verdict synthesized from all perspectives + debate results
-- [ ] Enhanced VERIFICATION.md written with executive summary, evidence matrix, debate results
-- [ ] All reports committed to git
-- [ ] User knows verdict and next steps
-</success_criteria>
