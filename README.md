@@ -6,11 +6,8 @@
 
 **3x quality. 2.5x speed. Same no-BS philosophy.**
 
-[![npm version](https://img.shields.io/npm/v/get-shit-done-cc?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/get-shit-done-cc)
-[![npm downloads](https://img.shields.io/npm/dm/get-shit-done-cc?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/get-shit-done-cc)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/5JJgD5svVS)
-[![X (Twitter)](https://img.shields.io/badge/X-@gsd__foundation-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/gsd_foundation)
-[![GitHub stars](https://img.shields.io/github/stars/glittercowboy/get-shit-done?style=for-the-badge&logo=github&color=181717)](https://github.com/glittercowboy/get-shit-done)
+[![GitHub stars](https://img.shields.io/github/stars/bslevin87/get-shit-done_ultra?style=for-the-badge&logo=github&color=181717)](https://github.com/bslevin87/get-shit-done_ultra)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
 <br>
@@ -37,24 +34,24 @@ npx get-shit-done-cc@latest
 
 **Trusted by engineers at Amazon, Google, Shopify, and Webflow.**
 
-[Why I Built Ultra](#why-i-built-ultra) · [How It Works](#how-it-works) · [The Ultra Pipeline](#the-ultra-pipeline) · [Commands](#commands) · [Knowledge Flywheel](#the-knowledge-flywheel) · [When to Use What](#when-to-use-what)
+[Why Ultra](#why-ultra) · [How It Works](#how-it-works) · [The Ultra Pipeline](#the-ultra-pipeline) · [Commands](#commands) · [Knowledge Flywheel](#the-knowledge-flywheel) · [When to Use What](#when-to-use-what)
 
 </div>
 
 ---
 
-## Why I Built Ultra
+## Why Ultra
 
-GSD solved context rot — the quality degradation that happens as Claude fills its context window. Fresh context per plan, atomic commits, structured plans. It works. Engineers at real companies use it every day.
+GSD is a solid foundation — context rot solved, fresh context per plan, atomic commits, structured plans. It works. Engineers at real companies use it every day.
 
-But once I had hundreds of hours building with GSD, I kept hitting the same four walls:
+But after running it on complex, multi-domain builds, I kept hitting the same four walls:
 
 1. **Blind spots** — A single researcher misses what a team of four would catch. One perspective isn't enough for complex phases.
 2. **Weak plans** — Plans look good until you're three tasks in and realize the architecture doesn't hold. No one challenged the assumptions.
 3. **Bugs slip through** — A single verifier does its best, but it can't simultaneously be the defender, the attacker, and the impartial judge.
 4. **No learning** — Phase 8 is as expensive as Phase 1. The system doesn't get smarter from what it's already built.
 
-Ultra fixes all four:
+Ultra is my fix for all four:
 
 | Problem | GSD | Ultra |
 |---------|-----|-------|
@@ -64,8 +61,6 @@ Ultra fixes all four:
 | No learning | Fresh start every phase | Knowledge flywheel — conventions compound |
 
 Ultra is GSD's natural evolution, not a bolt-on. Every Ultra command enriches what's already there. You can use GSD commands, Ultra commands, or mix them freely.
-
-— **TÂCHES**
 
 ---
 
@@ -118,8 +113,8 @@ Use `--claude`, `--opencode`, `--gemini`, or `--all` to skip the runtime prompt.
 Clone the repository and run the installer locally:
 
 ```bash
-git clone https://github.com/glittercowboy/get-shit-done.git
-cd get-shit-done
+git clone https://github.com/bslevin87/get-shit-done_ultra.git
+cd get-shit-done_ultra
 node bin/install.js --claude --local
 ```
 
@@ -744,11 +739,11 @@ OpenCode and Gemini CLI are now natively supported via `npx get-shit-done-cc`.
 
 ## Star History
 
-<a href="https://star-history.com/#glittercowboy/get-shit-done&Date">
+<a href="https://star-history.com/#bslevin87/get-shit-done_ultra&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=glittercowboy/get-shit-done&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=glittercowboy/get-shit-done&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=glittercowboy/get-shit-done&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=bslevin87/get-shit-done_ultra&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=bslevin87/get-shit-done_ultra&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=bslevin87/get-shit-done_ultra&type=Date" />
  </picture>
 </a>
 
